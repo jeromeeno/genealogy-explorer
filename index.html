@@ -137,17 +137,17 @@
 
         <!-- Line / Branch Selector (Both Sides) -->
         <div class="line-selector-bar" id="mapLineSelectorBar">
-          <button class="line-chip active" id="chipLineAll" onclick="setMapLine('all', this)">
-            <span class="line-icon">👑</span>
-            <div class="line-text"><span>Both Lines</span><small>All 4,631 Ancestors</small></div>
-          </button>
-          <button class="line-chip line-jerome" id="chipLineJerome" onclick="setMapLine('jerome', this)">
+          <button class="line-chip line-jerome active" id="chipLineJerome" onclick="setMapLine('jerome', this)">
             <span class="line-icon">⚜️</span>
-            <div class="line-text"><span>Jerome's Line</span><small>Canada, Acadia, France</small></div>
+            <div class="line-text"><span>Jerome's Line</span><small>Quebec, Acadia, France</small></div>
           </button>
           <button class="line-chip line-amy" id="chipLineAmy" onclick="setMapLine('amy', this)">
             <span class="line-icon">🌸</span>
             <div class="line-text"><span>Amy's Line</span><small>Colombia, South US, Swiss</small></div>
+          </button>
+          <button class="line-chip" id="chipLineAll" onclick="setMapLine('all', this)">
+            <span class="line-icon">👑</span>
+            <div class="line-text"><span>Both Lines</span><small>All 4,631 Ancestors</small></div>
           </button>
         </div>
 
@@ -271,10 +271,14 @@
       <div class="modal-handle"></div>
       
       <div class="modal-header">
-        <div>
-          <span class="badge-side" id="modalSideBadge">Jerome's Line</span>
+        <div style="flex:1;">
+          <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:4px;">
+            <span class="badge-side" id="modalSideBadge">Jerome's Line</span>
+            <span class="modal-origin-pill" id="modalOrigin">📍 Origin</span>
+          </div>
           <h2 class="modal-name" id="modalName">Name</h2>
-          <div style="font-size:0.8rem; color:var(--text-muted); margin-top:2px;" id="modalId">ID: ABCD-123</div>
+          <div class="modal-relation-banner" id="modalRelation">10th great-grandmother of Amy</div>
+          <div style="font-size:0.78rem; color:var(--text-muted); margin-top:4px;" id="modalId">ID: ABCD-123</div>
         </div>
         <button class="modal-close-btn" onclick="closeModal()">✕</button>
       </div>

@@ -116,7 +116,21 @@ function switchTab(tabId, el) {
   
   if (tabId === 'map' && googleMapInstance) {
     google.maps.event.trigger(googleMapInstance, 'resize');
-    if (mapInitialBounds) googleMapInstance.fitBounds(mapInitialBounds);
+    if (currentMapLine === 'jerome') {
+      const jeromeBounds = new google.maps.LatLngBounds();
+      MAP_LOCATIONS.filter(l => l.side === 'jerome').forEach(l => {
+        jeromeBounds.extend(new google.maps.LatLng(l.coords.lat, l.coords.lng));
+      });
+      googleMapInstance.fitBounds(jeromeBounds);
+    } else if (currentMapLine === 'amy') {
+      const amyBounds = new google.maps.LatLngBounds();
+      MAP_LOCATIONS.filter(l => l.side === 'amy').forEach(l => {
+        amyBounds.extend(new google.maps.LatLng(l.coords.lat, l.coords.lng));
+      });
+      googleMapInstance.fitBounds(amyBounds);
+    } else if (mapInitialBounds) {
+      googleMapInstance.fitBounds(mapInitialBounds);
+    }
   }
 
   window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -192,7 +206,9 @@ function executeSearch() {
 
     // 2. Text Search Matching
     if (currentSearchTerm) {
-      const searchStr = `${p.n} ${p.id} ${p.bp} ${p.dp} ${p.bu}`.toLowerCase();
+      const relStr = p.rel || getPersonRelationship(p);
+      const originStr = p.origin || getPersonOrigin(p);
+      const searchStr = `${p.n} ${p.id} ${p.bp} ${p.dp} ${p.bu} ${relStr} ${originStr}`.toLowerCase();
       if (!searchStr.includes(currentSearchTerm)) return false;
     }
 
@@ -244,21 +260,49 @@ function loadMoreResults() {
   renderSearchResults();
 }
 
-function createPersonCardHtml(p) {
-  const sideClass = p.s === 'jerome' ? 'badge-jerome' : (p.s === 'amy' ? 'badge-amy' : '');
-  const sideLabel = p.s === 'jerome' ? "Jerome's Line" : (p.s === 'amy' ? "Amy's Line" : "Relative");
-  
-  let genText = '';
-  if (p.gen !== null && p.gen !== undefined) {
-    if (p.gen === 0) genText = '• Self';
-    else if (p.gen === 1) genText = '• Parent';
-    else if (p.gen === 2) genText = '• Grandparent';
-    else if (p.gen === 3) genText = '• Great-Grandparent';
-    else genText = `• Gen ${p.gen}`;
+function getPersonRelationship(p) {
+  if (!p) return '';
+  if (p.rel) return p.rel;
+  if (p.id === 'PW92-F2S') return 'Jerome Eno (You)';
+  if (p.id === 'PW92-6SQ') return 'Amy Whisenhunt (Wife)';
+  const target = p.s === 'jerome' ? 'Jerome' : 'Amy';
+  const isF = (p.g === 'F');
+  const gen = p.gen;
+  if (gen === 1) return isF ? `Mother of ${target}` : `Father of ${target}`;
+  if (gen === 2) return isF ? `Grandmother of ${target}` : `Grandfather of ${target}`;
+  if (gen === 3) return isF ? `Great-grandmother of ${target}` : `Great-grandfather of ${target}`;
+  if (gen !== null && gen !== undefined && gen >= 4) {
+    const k = gen - 2;
+    const suffix = (10 <= k % 100 && k % 100 <= 20) ? 'th' : ({1: 'st', 2: 'nd', 3: 'rd'}[k % 10] || 'th');
+    const role = isF ? 'great-grandmother' : 'great-grandfather';
+    return `${k}${suffix} ${role} of ${target}`;
   }
+  return `Ancestor of ${target}`;
+}
 
-  const birthText = p.b || (p.bp ? p.bp.split(',')[0] : 'Unknown');
-  const deathText = p.d || (p.dp ? p.dp.split(',')[0] : 'Unknown');
+function getPersonOrigin(p) {
+  if (!p) return 'Origin Unknown';
+  if (p.origin) return p.origin;
+  if (p.geo && p.geo.name) return p.geo.name;
+  const raw = (p.bp || p.dp || p.bu || '').trim();
+  if (!raw) return 'Origin Unknown';
+  const parts = raw.split(',').map(s => s.trim()).filter(Boolean);
+  if (parts.length >= 3) {
+    return `${parts[0]}, ${parts[parts.length - 2]}, ${parts[parts.length - 1]}`;
+  }
+  return raw;
+}
+
+function createPersonCardHtml(p) {
+  const isJerome = p.s === 'jerome';
+  const sideClass = isJerome ? 'badge-jerome' : (p.s === 'amy' ? 'badge-amy' : '');
+  const sideLabel = isJerome ? "Jerome's Line" : (p.s === 'amy' ? "Amy's Line" : "Relative");
+  const relText = getPersonRelationship(p);
+  const relClass = isJerome ? 'card-relation-jerome' : 'card-relation-amy';
+  const sideIcon = isJerome ? '⚜️' : '🌸';
+  const originText = getPersonOrigin(p);
+
+  const genBadge = p.gen !== null && p.gen !== undefined ? `Gen ${p.gen}` : '';
 
   const tagsHtml = (p.tags || []).map(t => {
     let tClass = 'tag-loc';
@@ -270,8 +314,17 @@ function createPersonCardHtml(p) {
   return `
     <div class="person-card" onclick="openPersonModal('${p.id}')">
       <div class="card-top">
-        <div class="card-name">${escapeHtml(p.n)}</div>
-        <span class="badge-side ${sideClass}">${sideLabel} ${genText}</span>
+        <div style="flex:1; min-width:0;">
+          <div class="card-name">${escapeHtml(p.n)}</div>
+          <div class="card-relation-text ${relClass}">
+            <span>${sideIcon}</span> <span>${escapeHtml(relText)}</span>
+          </div>
+        </div>
+        <span class="badge-side ${sideClass}">${sideLabel} ${genBadge ? '• ' + genBadge : ''}</span>
+      </div>
+      <div class="card-origin-line" title="${escapeHtml(originText)}">
+        <span class="origin-pin">📍</span>
+        <span class="origin-text">${escapeHtml(originText)}</span>
       </div>
       <div class="card-vitals">
         <div class="vital-line">
@@ -361,6 +414,9 @@ function renderFoundersTree(container) {
           ${escapeHtml(f.role)}
         </div>
         <div style="font-weight:700; color:#fff; font-size:0.95rem;">${escapeHtml(p.n)}</div>
+        <div style="font-size:0.72rem; color:#fcd34d; font-weight:600; margin-top:1px;">
+          ⚜️ ${escapeHtml(getPersonRelationship(p))}
+        </div>
         <div style="font-size:0.75rem; color:var(--text-secondary); margin-top:2px;">
           ${escapeHtml(p.b || '—')} – ${escapeHtml(p.d || '—')}
         </div>
@@ -398,13 +454,18 @@ function renderTreeNodeLevel(personIds, level) {
       if (p.p && p.p.length > 0) {
         p.p.forEach(parentId => nextGenParents.push(parentId));
       }
+      const isJerome = p.s === 'jerome';
+      const icon = isJerome ? '⚜️' : '🌸';
       rowHtml += `
         <div class="tree-node-card" onclick="openPersonModal('${p.id}')">
+          <div style="font-size:0.68rem; font-weight:700; color:${isJerome ? 'var(--accent-gold)' : '#f472b6'}; margin-bottom:2px;">
+            ${icon} ${escapeHtml(getPersonRelationship(p))}
+          </div>
           <div style="font-weight:700; color:#fff; font-size:0.92rem;">${escapeHtml(p.n)}</div>
           <div style="font-size:0.75rem; color:var(--text-secondary); margin-top:2px;">
             ${escapeHtml(p.b ? p.b.slice(0, 10) : '—')} – ${escapeHtml(p.d ? p.d.slice(0, 10) : 'Living')}
           </div>
-          ${p.geo ? `<div class="tree-geo-pill">📍 ${escapeHtml(p.geo.name)}</div>` : ''}
+          <div class="tree-geo-pill" style="margin-top:6px;">📍 ${escapeHtml(getPersonOrigin(p))}</div>
           <div style="font-size:0.7rem; color:var(--text-muted); margin-top:4px;">
             ID: ${p.id}
           </div>
@@ -431,7 +492,8 @@ function renderWarStories() {
     const peopleButtons = (s.people || []).map(pid => {
       const p = people[pid];
       const pName = p ? p.n : pid;
-      return `<button class="ancestor-link-btn" onclick="openPersonModal('${pid}')">👤 ${escapeHtml(pName)}</button>`;
+      const relStr = p ? getPersonRelationship(p) : '';
+      return `<button class="ancestor-link-btn" onclick="openPersonModal('${pid}')">👤 ${escapeHtml(pName)}${relStr ? ` <span class="btn-subtext">(${escapeHtml(relStr)})</span>` : ''}</button>`;
     }).join('');
 
     return `
@@ -471,7 +533,8 @@ function renderImmigrationTimeline() {
     const peopleButtons = (item.immigrants || []).map(pid => {
       const p = people[pid];
       const pName = p ? p.n : pid;
-      return `<button class="ancestor-link-btn" onclick="openPersonModal('${pid}')">👤 ${escapeHtml(pName)}</button>`;
+      const relStr = p ? getPersonRelationship(p) : '';
+      return `<button class="ancestor-link-btn" onclick="openPersonModal('${pid}')">👤 ${escapeHtml(pName)}${relStr ? ` <span class="btn-subtext">(${escapeHtml(relStr)})</span>` : ''}</button>`;
     }).join('');
 
     const eraLabel = item.era === '17th' ? '17e Siècle (1600s)' :
@@ -523,8 +586,25 @@ function openPersonModal(pid) {
   const fsLink = document.getElementById('modalFsLink');
 
   // Side badge
-  badge.className = 'badge-side ' + (p.s === 'jerome' ? 'badge-jerome' : 'badge-amy');
-  badge.textContent = p.s === 'jerome' ? "Jerome's Ancestry" : (p.s === 'amy' ? "Amy's Ancestry" : "Relative");
+  const isJerome = p.s === 'jerome';
+  const relText = getPersonRelationship(p);
+  const originText = getPersonOrigin(p);
+  currentModalGeo = p.geo;
+  currentModalSide = p.s;
+
+  badge.className = 'badge-side ' + (isJerome ? 'badge-jerome' : 'badge-amy');
+  badge.textContent = isJerome ? "Jerome's Line" : "Amy's Line";
+
+  const relEl = document.getElementById('modalRelation');
+  if (relEl) {
+    relEl.className = 'modal-relation-banner ' + (isJerome ? 'banner-jerome' : 'banner-amy');
+    relEl.innerHTML = `<span>${isJerome ? '⚜️' : '🌸'}</span> <span>${escapeHtml(relText)}</span>`;
+  }
+
+  const originEl = document.getElementById('modalOrigin');
+  if (originEl) {
+    originEl.textContent = '📍 ' + originText;
+  }
 
   nameEl.textContent = p.n;
   idEl.textContent = `FamilySearch ID: ${p.id}`;
@@ -543,14 +623,12 @@ function openPersonModal(pid) {
   const geoSection = document.getElementById('modalGeoSection');
   const geoLocationEl = document.getElementById('modalGeoLocation');
   if (p.geo && p.geo.lat && p.geo.lng) {
-    currentModalGeo = p.geo;
     if (geoLocationEl) geoLocationEl.textContent = p.geo.name;
     if (geoSection) geoSection.style.display = 'block';
     setTimeout(() => {
       renderPersonMiniMap(p.geo.lat, p.geo.lng, p.n);
     }, 180);
   } else {
-    currentModalGeo = null;
     if (geoSection) geoSection.style.display = 'none';
   }
 
@@ -592,11 +670,16 @@ function openPersonModal(pid) {
 }
 
 function createRelItemHtml(pid, name, role) {
+  const relP = people[pid];
+  const relDesc = relP ? getPersonRelationship(relP) : `ID: ${pid}`;
+  const relOrigin = relP ? getPersonOrigin(relP) : '';
+  const isJerome = relP && relP.s === 'jerome';
+  const icon = isJerome ? '⚜️' : '🌸';
   return `
     <div class="rel-item" onclick="openPersonModal('${pid}')">
       <div>
         <div class="rel-name">${escapeHtml(name)}</div>
-        <div class="rel-role">${role} • ID: ${pid}</div>
+        <div class="rel-role">${role} • <span style="color:${isJerome ? '#fcd34d' : '#f472b6'}; font-weight:600;">${icon} ${escapeHtml(relDesc)}</span> ${relOrigin && relOrigin !== 'Origin Unknown' ? '• 📍 ' + escapeHtml(relOrigin) : ''}</div>
       </div>
       <span style="color:var(--accent-gold); font-size:1.1rem;">›</span>
     </div>
@@ -672,9 +755,14 @@ function renderPersonMiniMap(lat, lng, name) {
 function openPersonOnMainMap() {
   if (!currentModalGeo) return;
   const targetGeo = currentModalGeo;
+  const targetSide = currentModalSide;
   closeModal();
   switchTab('map');
   setTimeout(() => {
+    if (targetSide && currentMapLine !== 'all' && currentMapLine !== targetSide) {
+      const chip = document.getElementById(targetSide === 'jerome' ? 'chipLineJerome' : 'chipLineAmy');
+      setMapLine(targetSide, chip);
+    }
     focusOnMapLocation(targetGeo.lat, targetGeo.lng, targetGeo.name, 9);
   }, 250);
 }
@@ -695,7 +783,7 @@ let googleMapInstance = null;
 let mapMarkers = [];
 let mapPolylines = [];
 let mapInitialBounds = null;
-let currentMapLine = 'all';
+let currentMapLine = 'jerome';
 let currentMapEra = 'all';
 let currentMapCategory = 'all';
 
@@ -1299,6 +1387,7 @@ function initGoogleMap() {
     zoomControl: true
   });
 
+  const jeromeBounds = new google.maps.LatLngBounds();
   mapInitialBounds = new google.maps.LatLngBounds();
 
   // Distinctive Pin Icons for Jerome vs Amy
@@ -1329,6 +1418,9 @@ function initGoogleMap() {
   MAP_LOCATIONS.forEach(loc => {
     const latLng = new google.maps.LatLng(loc.coords.lat, loc.coords.lng);
     mapInitialBounds.extend(latLng);
+    if (loc.side === 'jerome') {
+      jeromeBounds.extend(latLng);
+    }
 
     const marker = new google.maps.Marker({
       position: latLng,
@@ -1362,7 +1454,8 @@ function initGoogleMap() {
     mapPolylines.push({ polyline, era: route.era, side: route.side, route });
   });
 
-  googleMapInstance.fitBounds(mapInitialBounds);
+  applyMapFilters();
+  googleMapInstance.fitBounds(jeromeBounds);
   renderMapEraTimeline('all');
 }
 
@@ -1387,7 +1480,8 @@ function showMapLocationCard(loc) {
   ancEl.innerHTML = (loc.people || []).map(pid => {
     const p = people[pid];
     const pName = p ? p.n : pid;
-    return `<button class="ancestor-link-btn" onclick="openPersonModal('${pid}')">👤 ${escapeHtml(pName)}</button>`;
+    const relStr = p ? getPersonRelationship(p) : '';
+    return `<button class="ancestor-link-btn" onclick="openPersonModal('${pid}')">👤 ${escapeHtml(pName)}${relStr ? ` <span class="btn-subtext">(${escapeHtml(relStr)})</span>` : ''}</button>`;
   }).join('');
 
   card.style.display = 'block';
@@ -1405,17 +1499,22 @@ function setMapLine(line, el) {
 
   applyMapFilters();
 
-  // Camera fly-to based on selected family line
+  // Camera fly-to and bounds based on selected family line
   if (googleMapInstance) {
     if (line === 'jerome') {
-      googleMapInstance.panTo({ lat: 46.5, lng: -55.0 });
-      googleMapInstance.setZoom(4.2);
+      const jeromeBounds = new google.maps.LatLngBounds();
+      MAP_LOCATIONS.filter(l => l.side === 'jerome').forEach(l => {
+        jeromeBounds.extend(new google.maps.LatLng(l.coords.lat, l.coords.lng));
+      });
+      googleMapInstance.fitBounds(jeromeBounds);
     } else if (line === 'amy') {
-      googleMapInstance.panTo({ lat: 24.0, lng: -65.0 });
-      googleMapInstance.setZoom(3.6);
+      const amyBounds = new google.maps.LatLngBounds();
+      MAP_LOCATIONS.filter(l => l.side === 'amy').forEach(l => {
+        amyBounds.extend(new google.maps.LatLng(l.coords.lat, l.coords.lng));
+      });
+      googleMapInstance.fitBounds(amyBounds);
     } else {
-      googleMapInstance.panTo({ lat: 28.0, lng: -50.0 });
-      googleMapInstance.setZoom(3.2);
+      googleMapInstance.fitBounds(mapInitialBounds);
     }
   }
 
@@ -1449,7 +1548,21 @@ function setMapEra(era, el) {
       googleMapInstance.panTo({ lat: 44.8, lng: -67.5 });
       googleMapInstance.setZoom(5.8);
     } else {
-      if (mapInitialBounds) googleMapInstance.fitBounds(mapInitialBounds);
+      if (currentMapLine === 'jerome') {
+        const jeromeBounds = new google.maps.LatLngBounds();
+        MAP_LOCATIONS.filter(l => l.side === 'jerome').forEach(l => {
+          jeromeBounds.extend(new google.maps.LatLng(l.coords.lat, l.coords.lng));
+        });
+        googleMapInstance.fitBounds(jeromeBounds);
+      } else if (currentMapLine === 'amy') {
+        const amyBounds = new google.maps.LatLngBounds();
+        MAP_LOCATIONS.filter(l => l.side === 'amy').forEach(l => {
+          amyBounds.extend(new google.maps.LatLng(l.coords.lat, l.coords.lng));
+        });
+        googleMapInstance.fitBounds(amyBounds);
+      } else if (mapInitialBounds) {
+        googleMapInstance.fitBounds(mapInitialBounds);
+      }
     }
   }
 
@@ -1466,9 +1579,9 @@ function setMapFilter(cat, el) {
 
 function applyMapFilters() {
   mapMarkers.forEach(m => {
-    const lineMatch = currentMapLine === 'all' || m.side === currentMapLine;
-    const eraMatch = currentMapEra === 'all' || m.era === currentMapEra;
-    const catMatch = currentMapCategory === 'all' || m.category === currentMapCategory;
+    const lineMatch = (currentMapLine === 'all') || (m.side === currentMapLine);
+    const eraMatch = (currentMapEra === 'all') || (m.era === currentMapEra);
+    const catMatch = (currentMapCategory === 'all') || (m.category === currentMapCategory);
     
     if (lineMatch && eraMatch && catMatch) {
       m.marker.setMap(googleMapInstance);
@@ -1478,8 +1591,9 @@ function applyMapFilters() {
   });
 
   mapPolylines.forEach(p => {
-    const lineMatch = currentMapLine === 'all' || p.side === 'both' || p.side === currentMapLine;
-    const eraMatch = currentMapEra === 'all' || p.era === currentMapEra;
+    // Strictly isolate lines: 'both' (Pan-American Union) only shows in 'all' view!
+    const lineMatch = (currentMapLine === 'all') ? true : (p.side === currentMapLine);
+    const eraMatch = (currentMapEra === 'all') || (p.era === currentMapEra);
     
     if (lineMatch && eraMatch) {
       p.polyline.setMap(googleMapInstance);
@@ -1517,7 +1631,8 @@ function renderMapEraTimeline(era) {
     const peoplePills = (loc.people || []).map(pid => {
       const p = people[pid];
       const pName = p ? p.n : pid;
-      return `<button class="ancestor-link-btn" onclick="openPersonModal('${pid}')">👤 ${escapeHtml(pName)}</button>`;
+      const relStr = p ? getPersonRelationship(p) : '';
+      return `<button class="ancestor-link-btn" onclick="openPersonModal('${pid}')">👤 ${escapeHtml(pName)}${relStr ? ` <span class="btn-subtext">(${escapeHtml(relStr)})</span>` : ''}</button>`;
     }).join('');
 
     return `
