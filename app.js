@@ -112,6 +112,9 @@ function switchTab(tabId, el) {
   
   const targetSection = document.getElementById(`view-${tabId}`);
   if (targetSection) targetSection.classList.add('active');
+
+  // Synchronize both desktop header nav and mobile bottom nav tabs
+  document.querySelectorAll(`.nav-tab[data-tab="${tabId}"]`).forEach(btn => btn.classList.add('active'));
   if (el) el.classList.add('active');
   
   if (tabId === 'map' && googleMapInstance) {
@@ -2014,7 +2017,11 @@ function filterTimelineToCurrentHub() {
   timelinePage = 1;
   renderMasterTimeline();
   const timelineEl = document.getElementById('mapMasterTimelineWrap');
-  if (timelineEl) {
+  const timelineList = document.getElementById('mapTimelineList');
+  if (timelineList) {
+    timelineList.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+  if (window.innerWidth < 1024 && timelineEl) {
     timelineEl.scrollIntoView({ behavior: 'smooth' });
   }
 }
@@ -2047,6 +2054,12 @@ function flyToTimelineEvent(eventId) {
   if (matchedHub) {
     showMapLocationCard(matchedHub);
   }
+
+  // On mobile screens, scroll the map into view so user sees it
+  if (window.innerWidth < 1024) {
+    const mapWrap = document.getElementById('mapContainerWrapper');
+    if (mapWrap) mapWrap.scrollIntoView({ behavior: 'smooth' });
+  }
 }
 
 function focusOnMapLocation(lat, lng, title, zoom = 9) {
@@ -2065,5 +2078,21 @@ function focusOnMapLocation(lat, lng, title, zoom = 9) {
   if (matched) {
     showMapLocationCard(matched);
   }
+
+  if (window.innerWidth < 1024) {
+    const mapWrap = document.getElementById('mapContainerWrapper');
+    if (mapWrap) mapWrap.scrollIntoView({ behavior: 'smooth' });
+  }
 }
+
+// Window resize handler for Google Maps viewport recalculation
+let resizeDebounceTimer = null;
+window.addEventListener('resize', () => {
+  clearTimeout(resizeDebounceTimer);
+  resizeDebounceTimer = setTimeout(() => {
+    if (googleMapInstance && currentTab === 'map') {
+      google.maps.event.trigger(googleMapInstance, 'resize');
+    }
+  }, 200);
+});
 

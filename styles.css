@@ -182,14 +182,22 @@ body {
   position: sticky;
   top: 0;
   z-index: 100;
-  background: rgba(11, 15, 23, 0.85);
+  background: rgba(11, 15, 23, 0.88);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border-bottom: 1px solid var(--border-color);
   padding: 12px 16px;
+}
+
+.header-inner {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  width: 100%;
+}
+
+.desktop-nav-bar {
+  display: none;
 }
 
 .brand-wrap {
@@ -295,9 +303,8 @@ body {
 /* ---------------- Views Container ---------------- */
 .view-container {
   padding: 16px;
-  max-width: 900px;
-  margin: 0 auto;
   width: 100%;
+  margin: 0 auto;
 }
 
 .view-section {
@@ -961,17 +968,70 @@ body {
   transform: scale(0.98);
 }
 
-/* ---------------- Responsive Desktop ---------------- */
+/* ---------------- Layout & Workspace Containers ---------------- */
+.map-command-workspace {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.map-workspace-left,
+.map-workspace-right {
+  width: 100%;
+}
+
+.timeline-header-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.modal-body-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.master-timeline-list::-webkit-scrollbar {
+  width: 6px;
+}
+.master-timeline-list::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 3px;
+}
+.master-timeline-list::-webkit-scrollbar-thumb {
+  background: rgba(245, 158, 11, 0.3);
+  border-radius: 3px;
+}
+.master-timeline-list::-webkit-scrollbar-thumb:hover {
+  background: var(--accent-gold);
+}
+
+/* ---------------- Responsive Desktop & Command Center ---------------- */
+
+/* Tablet (768px - 1023px) */
 @media (min-width: 768px) {
   .app-header {
-    padding: 14px 32px;
+    padding: 14px 28px;
   }
   .view-container {
-    padding: 24px 32px;
+    max-width: 960px;
+    padding: 24px 28px;
   }
-  .modal-sheet {
-    border-radius: var(--radius-lg);
-    margin-bottom: 40px;
+  .search-bar-wrap {
+    max-width: 640px;
+  }
+  .filter-chips-wrap {
+    flex-wrap: wrap;
+    overflow-x: visible;
+  }
+  .person-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+    gap: 14px;
   }
   .bottom-nav {
     max-width: 440px;
@@ -984,6 +1044,213 @@ body {
   }
   #appContainer {
     padding-bottom: 90px;
+  }
+  .modal-backdrop {
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+  }
+  .modal-sheet {
+    border-radius: var(--radius-xl);
+    max-width: 740px;
+    max-height: 86vh;
+    margin-bottom: 0;
+    animation: modalPopIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    box-shadow: 0 25px 60px rgba(0, 0, 0, 0.8), 0 0 0 1px rgba(255, 255, 255, 0.1);
+  }
+  .modal-handle {
+    display: none;
+  }
+  .modal-body-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    align-items: start;
+  }
+}
+
+/* Stories grid responsive */
+@media (min-width: 900px) {
+  .story-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+  }
+}
+
+/* Desktop & Widescreen Command Center (>= 1024px) */
+@media (min-width: 1024px) {
+  .app-header {
+    padding: 12px 36px;
+  }
+  .header-inner {
+    max-width: 1600px;
+    margin: 0 auto;
+  }
+
+  /* Desktop Header Navigation */
+  .desktop-nav-bar {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: var(--radius-full);
+    padding: 4px 6px;
+  }
+  .desktop-nav-bar .nav-tab {
+    display: inline-flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 16px;
+    font-size: 0.84rem;
+    font-weight: 600;
+    border-radius: var(--radius-full);
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    background: none;
+    border: none;
+  }
+  .desktop-nav-bar .nav-tab svg {
+    width: 18px;
+    height: 18px;
+    stroke: currentColor;
+    stroke-width: 2;
+    fill: none;
+  }
+  .desktop-nav-bar .nav-tab:hover {
+    color: #fff;
+    background: rgba(255, 255, 255, 0.06);
+  }
+  .desktop-nav-bar .nav-tab.active {
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.2), rgba(245, 158, 11, 0.08));
+    color: var(--accent-gold-light);
+    border: 1px solid rgba(245, 158, 11, 0.4);
+    box-shadow: 0 0 14px rgba(245, 158, 11, 0.2);
+  }
+  .desktop-nav-bar .nav-tab.active svg {
+    stroke: var(--accent-gold);
+  }
+
+  /* Hide mobile bottom pill on desktop */
+  .bottom-nav {
+    display: none !important;
+  }
+  #appContainer {
+    padding-bottom: 30px !important;
+  }
+
+  /* Expanded View Container */
+  .view-container {
+    max-width: 1600px;
+    width: 95%;
+    padding: 24px 36px;
+    margin: 0 auto;
+  }
+
+  /* Tree Canvas expanded */
+  .tree-canvas-wrap {
+    min-height: 720px;
+    padding: 24px;
+  }
+
+  /* Immigrant Origins container */
+  #view-timeline .timeline-wrap {
+    max-width: 960px;
+    margin: 0 auto;
+  }
+
+  /* Dual-Column Map Command Center */
+  .map-command-workspace {
+    display: grid;
+    grid-template-columns: 1.25fr 0.95fr;
+    gap: 28px;
+    align-items: start;
+  }
+
+  .map-workspace-left {
+    position: sticky;
+    top: 76px;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .map-workspace-left .line-selector-bar,
+  .map-workspace-left .era-filter-bar {
+    flex-wrap: wrap;
+    overflow-x: visible;
+  }
+
+  .map-workspace-left .map-container-wrapper {
+    height: calc(100vh - 270px);
+    min-height: 580px;
+    max-height: 800px;
+    margin-bottom: 0;
+  }
+
+  .map-workspace-right {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+
+  .map-workspace-right #mapMasterTimelineWrap {
+    margin-top: 0 !important;
+  }
+
+  .map-workspace-right .master-timeline-list {
+    max-height: calc(100vh - 270px);
+    min-height: 580px;
+    overflow-y: auto;
+    padding-right: 8px;
+  }
+}
+
+/* Large Displays / 27-inch iMac / 4K (>= 1440px) */
+@media (min-width: 1440px) {
+  .app-header {
+    padding: 14px 44px;
+  }
+  .header-inner {
+    max-width: 1720px;
+  }
+  .view-container {
+    max-width: 1720px;
+    padding: 28px 44px;
+  }
+  .person-list {
+    grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+    gap: 18px;
+  }
+  .story-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 22px;
+  }
+  .map-command-workspace {
+    grid-template-columns: 1.28fr 0.92fr;
+    gap: 32px;
+  }
+  .map-workspace-left .map-container-wrapper {
+    height: calc(100vh - 260px);
+    min-height: 640px;
+    max-height: 840px;
+  }
+  .map-workspace-right .master-timeline-list {
+    max-height: calc(100vh - 260px);
+    min-height: 640px;
+  }
+}
+
+@keyframes modalPopIn {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
   }
 }
 

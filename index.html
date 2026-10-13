@@ -54,20 +54,47 @@
   <div id="appContainer">
     <!-- Header -->
     <header class="app-header">
-      <div class="brand-wrap">
-        <div class="brand-icon">⚜️</div>
-        <div>
-          <div class="brand-title">Eno-Whisenhunt Heritage</div>
-          <div class="brand-sub" id="headerSubtitle">4,631 Documented Ancestors • ~1600</div>
+      <div class="header-inner">
+        <div class="brand-wrap">
+          <div class="brand-icon">⚜️</div>
+          <div>
+            <div class="brand-title">Eno-Whisenhunt Heritage</div>
+            <div class="brand-sub" id="headerSubtitle">4,631 Documented Ancestors • ~1600</div>
+          </div>
         </div>
-      </div>
-      <div class="header-actions">
-        <button class="btn-icon" onclick="lockApp()" title="Lock App">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
-            <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
-          </svg>
-        </button>
+
+        <!-- Desktop Navigation Bar (shown on screens >= 1024px) -->
+        <nav class="desktop-nav-bar" id="desktopNavBar">
+          <button class="nav-tab active" data-tab="search" onclick="switchTab('search', this)">
+            <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+            <span>Search</span>
+          </button>
+          <button class="nav-tab" data-tab="tree" onclick="switchTab('tree', this)">
+            <svg viewBox="0 0 24 24"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>
+            <span>Tree</span>
+          </button>
+          <button class="nav-tab" data-tab="map" onclick="switchTab('map', this)">
+            <svg viewBox="0 0 24 24"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"></polygon><line x1="8" y1="2" x2="8" y2="18"></line><line x1="16" y1="6" x2="16" y2="22"></line></svg>
+            <span>Map</span>
+          </button>
+          <button class="nav-tab" data-tab="stories" onclick="switchTab('stories', this)">
+            <svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path></svg>
+            <span>Stories</span>
+          </button>
+          <button class="nav-tab" data-tab="timeline" onclick="switchTab('timeline', this)">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 14 14"></polyline></svg>
+            <span>Origins</span>
+          </button>
+        </nav>
+
+        <div class="header-actions">
+          <button class="btn-icon" onclick="lockApp()" title="Lock App">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+              <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+            </svg>
+          </button>
+        </div>
       </div>
     </header>
 
@@ -135,175 +162,183 @@
           </p>
         </div>
 
-          <!-- Line / Branch Selector (Both Sides) -->
-        <div class="line-selector-bar" id="mapLineSelectorBar">
-          <button class="line-chip line-jerome active" id="chipLineJerome" onclick="setMapLine('jerome', this)">
-            <span class="line-icon">⚜️</span>
-            <div class="line-text"><span>Jerome's Line</span><small>Quebec, Acadia, France</small></div>
-          </button>
-          <button class="line-chip line-amy" id="chipLineAmy" onclick="setMapLine('amy', this)">
-            <span class="line-icon">🌸</span>
-            <div class="line-text"><span>Amy's Line</span><small>Colombia, South US, Swiss</small></div>
-          </button>
-          <button class="line-chip" id="chipLineAll" onclick="setMapLine('all', this)">
-            <span class="line-icon">👑</span>
-            <div class="line-text"><span>Combined View</span><small>Both Families (4,631)</small></div>
-          </button>
-        </div>
-
-        <!-- Century / Era Horizontal Carousel -->
-        <div class="era-filter-bar" id="eraFilterBar">
-          <button class="era-chip active" onclick="setMapEra('all', this)">
-            <span class="era-icon">🌐</span>
-            <div class="era-text"><span>All Eras</span><small>1500–Present</small></div>
-          </button>
-          <button class="era-chip" onclick="setMapEra('17th', this)">
-            <span class="era-icon">⛵</span>
-            <div class="era-text"><span>16e–17e Siècle</span><small>Colonial Crossings</small></div>
-          </button>
-          <button class="era-chip" onclick="setMapEra('18th', this)">
-            <span class="era-icon">⚔️</span>
-            <div class="era-text"><span>18e Siècle</span><small>Frontier & Revolutions</small></div>
-          </button>
-          <button class="era-chip" onclick="setMapEra('19th', this)">
-            <span class="era-icon">🏭</span>
-            <div class="era-text"><span>19e Siècle</span><small>Pioneer Migrations</small></div>
-          </button>
-          <button class="era-chip" onclick="setMapEra('20th', this)">
-            <span class="era-icon">🍁</span>
-            <div class="era-text"><span>20e Siècle</span><small>Modern Arrivals</small></div>
-          </button>
-        </div>
-
-        <div class="filter-chips-wrap" style="margin-top:10px;">
-          <button class="chip active" onclick="setMapFilter('all', this)">All Types</button>
-          <button class="chip" onclick="setMapFilter('immigration', this)">🚢 Migrations & Towns</button>
-          <button class="chip" onclick="setMapFilter('battle', this)">🎖️ Battles & Forts</button>
-          <button class="chip" onclick="setMapFilter('cemetery', this)">⛪ Cemeteries & Missions</button>
-        </div>
-
-        <!-- Map Container Wrapper with In-Map Overlays (Preserved in Fullscreen) -->
-        <div id="mapContainerWrapper" class="map-container-wrapper">
-          <div id="googleMap" class="map-frame"></div>
-
-          <!-- In-Map Fullscreen and Camera Controls -->
-          <div class="in-map-controls">
-            <button class="in-map-btn" id="btnMapFullscreen" onclick="toggleMapFullscreen()" title="Toggle Fullscreen Map">⛶ Fullscreen</button>
-            <button class="in-map-btn" onclick="resetMapView()" title="Reset Camera">↺ Reset View</button>
-          </div>
-
-          <!-- In-Map Color Key / Legend -->
-          <div id="mapLegendControl" class="in-map-legend">
-            <div class="legend-header" onclick="toggleMapLegend()">
-              <span class="legend-title">🗺️ Map Key</span>
-              <span id="legendToggleIcon" class="legend-toggle-icon">▾</span>
+        <div class="map-command-workspace">
+          <!-- Left Column: Map & Controls -->
+          <div class="map-workspace-left">
+            <!-- Line / Branch Selector (Both Sides) -->
+            <div class="line-selector-bar" id="mapLineSelectorBar">
+              <button class="line-chip line-jerome active" id="chipLineJerome" onclick="setMapLine('jerome', this)">
+                <span class="line-icon">⚜️</span>
+                <div class="line-text"><span>Jerome's Line</span><small>Quebec, Acadia, France</small></div>
+              </button>
+              <button class="line-chip line-amy" id="chipLineAmy" onclick="setMapLine('amy', this)">
+                <span class="line-icon">🌸</span>
+                <div class="line-text"><span>Amy's Line</span><small>Colombia, South US, Swiss</small></div>
+              </button>
+              <button class="line-chip" id="chipLineAll" onclick="setMapLine('all', this)">
+                <span class="line-icon">👑</span>
+                <div class="line-text"><span>Combined View</span><small>Both Families (4,631)</small></div>
+              </button>
             </div>
-            <div id="legendBody" class="legend-body">
-              <div class="legend-item"><span class="legend-dot dot-jerome"></span> ⚜️ Jerome's Family (Quebec, Acadia, France)</div>
-              <div class="legend-item"><span class="legend-dot dot-amy"></span> 🌸 Amy's Family (Colombia, South US, Swiss, England)</div>
-              <div class="legend-item"><span class="legend-dot dot-both"></span> 🏛️ Shared Towns (Both Families Lived Here)</div>
-              <div class="legend-divider"></div>
-              <div class="legend-item"><span class="legend-icon">🚢</span> Migrations & Pioneer Harbors</div>
-              <div class="legend-item"><span class="legend-icon">🎖️</span> Battles & Historic Forts</div>
-              <div class="legend-item"><span class="legend-icon">⛪</span> Cemeteries & Resting Places</div>
-              <div class="legend-item"><span class="legend-icon">🏛️</span> Colonial Parishes & Settlements</div>
-            </div>
-          </div>
 
-          <!-- In-Map Selected Location Details Box (Glassmorphic Bottom Sheet / Floating Card) -->
-          <div id="mapLocationCard" class="map-info-card in-map-card" style="display:none;">
-            <div class="bottom-sheet-handle" onclick="toggleMapCardMinimize()"></div>
-            
-            <div class="in-map-card-header">
-              <div>
-                <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
-                  <span id="mapCardSideBadge" class="tag-pill tag-jerome" style="font-size:0.65rem;">⚜️ Jerome's Line</span>
-                  <span id="mapCardEraBadge" class="era-counter-badge" style="font-size:0.65rem;">17e Siècle</span>
-                  <span id="mapCardCategory" class="story-conflict" style="font-size:0.65rem;">SETTLEMENT</span>
+            <!-- Century / Era Horizontal Carousel -->
+            <div class="era-filter-bar" id="eraFilterBar">
+              <button class="era-chip active" onclick="setMapEra('all', this)">
+                <span class="era-icon">🌐</span>
+                <div class="era-text"><span>All Eras</span><small>1500–Present</small></div>
+              </button>
+              <button class="era-chip" onclick="setMapEra('17th', this)">
+                <span class="era-icon">⛵</span>
+                <div class="era-text"><span>16e–17e Siècle</span><small>Colonial Crossings</small></div>
+              </button>
+              <button class="era-chip" onclick="setMapEra('18th', this)">
+                <span class="era-icon">⚔️</span>
+                <div class="era-text"><span>18e Siècle</span><small>Frontier & Revolutions</small></div>
+              </button>
+              <button class="era-chip" onclick="setMapEra('19th', this)">
+                <span class="era-icon">🏭</span>
+                <div class="era-text"><span>19e Siècle</span><small>Pioneer Migrations</small></div>
+              </button>
+              <button class="era-chip" onclick="setMapEra('20th', this)">
+                <span class="era-icon">🍁</span>
+                <div class="era-text"><span>20e Siècle</span><small>Modern Arrivals</small></div>
+              </button>
+            </div>
+
+            <div class="filter-chips-wrap" style="margin-top:6px; margin-bottom:12px;">
+              <button class="chip active" onclick="setMapFilter('all', this)">All Types</button>
+              <button class="chip" onclick="setMapFilter('immigration', this)">🚢 Migrations & Towns</button>
+              <button class="chip" onclick="setMapFilter('battle', this)">🎖️ Battles & Forts</button>
+              <button class="chip" onclick="setMapFilter('cemetery', this)">⛪ Cemeteries & Missions</button>
+            </div>
+
+            <!-- Map Container Wrapper with In-Map Overlays (Preserved in Fullscreen) -->
+            <div id="mapContainerWrapper" class="map-container-wrapper">
+              <div id="googleMap" class="map-frame"></div>
+
+              <!-- In-Map Fullscreen and Camera Controls -->
+              <div class="in-map-controls">
+                <button class="in-map-btn" id="btnMapFullscreen" onclick="toggleMapFullscreen()" title="Toggle Fullscreen Map">⛶ Fullscreen</button>
+                <button class="in-map-btn" onclick="resetMapView()" title="Reset Camera">↺ Reset View</button>
+              </div>
+
+              <!-- In-Map Color Key / Legend -->
+              <div id="mapLegendControl" class="in-map-legend">
+                <div class="legend-header" onclick="toggleMapLegend()">
+                  <span class="legend-title">🗺️ Map Key</span>
+                  <span id="legendToggleIcon" class="legend-toggle-icon">▾</span>
                 </div>
-                <h3 id="mapCardTitle" class="in-map-card-title">Location Name</h3>
-                <div id="mapCardRegion" class="in-map-card-region">Region</div>
+                <div id="legendBody" class="legend-body">
+                  <div class="legend-item"><span class="legend-dot dot-jerome"></span> ⚜️ Jerome's Family (Quebec, Acadia, France)</div>
+                  <div class="legend-item"><span class="legend-dot dot-amy"></span> 🌸 Amy's Family (Colombia, South US, Swiss, England)</div>
+                  <div class="legend-item"><span class="legend-dot dot-both"></span> 🏛️ Shared Towns (Both Families Lived Here)</div>
+                  <div class="legend-divider"></div>
+                  <div class="legend-item"><span class="legend-icon">🚢</span> Migrations & Pioneer Harbors</div>
+                  <div class="legend-item"><span class="legend-icon">🎖️</span> Battles & Historic Forts</div>
+                  <div class="legend-item"><span class="legend-icon">⛪</span> Cemeteries & Resting Places</div>
+                  <div class="legend-item"><span class="legend-icon">🏛️</span> Colonial Parishes & Settlements</div>
+                </div>
               </div>
-              <div class="in-map-card-actions">
-                <button class="in-map-mini-btn" id="btnMinimizeCard" onclick="toggleMapCardMinimize()" title="Minimize / Expand">−</button>
-                <button class="in-map-mini-btn" onclick="closeMapCard()" title="Close">✕</button>
+
+              <!-- In-Map Selected Location Details Box (Glassmorphic Bottom Sheet / Floating Card) -->
+              <div id="mapLocationCard" class="map-info-card in-map-card" style="display:none;">
+                <div class="bottom-sheet-handle" onclick="toggleMapCardMinimize()"></div>
+                
+                <div class="in-map-card-header">
+                  <div>
+                    <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+                      <span id="mapCardSideBadge" class="tag-pill tag-jerome" style="font-size:0.65rem;">⚜️ Jerome's Line</span>
+                      <span id="mapCardEraBadge" class="era-counter-badge" style="font-size:0.65rem;">17e Siècle</span>
+                      <span id="mapCardCategory" class="story-conflict" style="font-size:0.65rem;">SETTLEMENT</span>
+                    </div>
+                    <h3 id="mapCardTitle" class="in-map-card-title">Location Name</h3>
+                    <div id="mapCardRegion" class="in-map-card-region">Region</div>
+                  </div>
+                  <div class="in-map-card-actions">
+                    <button class="in-map-mini-btn" id="btnMinimizeCard" onclick="toggleMapCardMinimize()" title="Minimize / Expand">−</button>
+                    <button class="in-map-mini-btn" onclick="closeMapCard()" title="Close">✕</button>
+                  </div>
+                </div>
+
+                <div class="card-scroll-area" id="mapCardScrollArea">
+                  <p id="mapCardDesc" class="in-map-card-desc"></p>
+
+                  <!-- In-Card Tabs: Relatives vs Events -->
+                  <div class="in-map-tab-bar">
+                    <button class="in-map-tab active" id="tabCardAncestors" onclick="switchCardTab('ancestors')">
+                      Ancestors (<span id="mapCardAncestorsCount">0</span>)
+                    </button>
+                    <button class="in-map-tab" id="tabCardEvents" onclick="switchCardTab('events')">
+                      Local Events (<span id="mapCardEventsCount">0</span>)
+                    </button>
+                  </div>
+
+                  <!-- Search inside card -->
+                  <div class="in-map-search-wrap">
+                    <input type="text" id="mapCardSearchInput" class="in-map-search-input" placeholder="Search people at this location..." oninput="handleMapCardSearch()">
+                  </div>
+
+                  <!-- Ancestors List Container -->
+                  <div id="mapCardAncestors" class="story-ancestors" style="margin-top:8px;"></div>
+
+                  <!-- Local Events List Container -->
+                  <div id="mapCardEventsList" class="card-events-list" style="display:none; margin-top:8px;"></div>
+
+                  <div style="margin-top:12px; padding-top:10px; border-top:1px solid rgba(255,255,255,0.08);">
+                    <button class="btn-geo-action" onclick="filterTimelineToCurrentHub()">
+                      📜 View All Events for this Hub in Master Timeline
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
+          </div>
 
-            <div class="card-scroll-area" id="mapCardScrollArea">
-              <p id="mapCardDesc" class="in-map-card-desc"></p>
+          <!-- Right Column: Synchronized Master Event Timeline -->
+          <div class="map-workspace-right">
+            <!-- Master Synchronized Event Timeline Section -->
+            <div id="mapMasterTimelineWrap">
+              <div class="timeline-header-bar">
+                <div>
+                  <h3 id="timelineHeaderTitle" style="font-size:1.15rem; font-weight:800; color:#fff;">Chronological Master Timeline</h3>
+                  <p style="font-size:0.8rem; color:var(--text-secondary); margin-top:2px;">Filterable events across all centuries synchronized directly with the map.</p>
+                </div>
+                <span id="timelineCountBadge" class="era-counter-badge">10,617 Events</span>
+              </div>
 
-              <!-- In-Card Tabs: Relatives vs Events -->
-              <div class="in-map-tab-bar">
-                <button class="in-map-tab active" id="tabCardAncestors" onclick="switchCardTab('ancestors')">
-                  Ancestors (<span id="mapCardAncestorsCount">0</span>)
+              <!-- Timeline Search & Quick Filters -->
+              <div class="timeline-controls-bar">
+                <div class="search-bar-wrap" style="margin-bottom:8px;">
+                  <svg class="search-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="11" cy="11" r="8"></circle>
+                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                  </svg>
+                  <input type="text" id="timelineSearchInput" class="search-input" placeholder="Filter events by ancestor name, town, parish, or year..." oninput="handleTimelineSearch()">
+                  <button id="timelineClearBtn" class="search-clear-btn" onclick="clearTimelineSearch()">✕</button>
+                </div>
+
+                <!-- Event Type Filter Chips -->
+                <div class="filter-chips-wrap">
+                  <button class="chip active" onclick="setTimelineTypeFilter('all', this)">All Events</button>
+                  <button class="chip" onclick="setTimelineTypeFilter('battle', this)">🎖️ Battles & Chronicles</button>
+                  <button class="chip" onclick="setTimelineTypeFilter('migration', this)">🚢 Immigrant Journeys</button>
+                  <button class="chip" onclick="setTimelineTypeFilter('marriage', this)">💍 Marriages</button>
+                  <button class="chip" onclick="setTimelineTypeFilter('birth', this)">🌱 Births</button>
+                  <button class="chip" onclick="setTimelineTypeFilter('death', this)">⚰️ Deaths</button>
+                </div>
+              </div>
+
+              <!-- Master Timeline Events List -->
+              <div id="mapTimelineList" class="master-timeline-list" style="margin-top:14px;">
+                <!-- Timeline milestone cards rendered dynamically -->
+              </div>
+
+              <div style="text-align:center; padding: 18px 0;">
+                <button id="loadMoreTimelineBtn" class="chip" onclick="loadMoreTimelineEvents()" style="display:none; margin:0 auto; padding:8px 24px;">
+                  Load More Events
                 </button>
-                <button class="in-map-tab" id="tabCardEvents" onclick="switchCardTab('events')">
-                  Local Events (<span id="mapCardEventsCount">0</span>)
-                </button>
-              </div>
-
-              <!-- Search inside card -->
-              <div class="in-map-search-wrap">
-                <input type="text" id="mapCardSearchInput" class="in-map-search-input" placeholder="Search people at this location..." oninput="handleMapCardSearch()">
-              </div>
-
-              <!-- Ancestors List Container -->
-              <div id="mapCardAncestors" class="story-ancestors" style="margin-top:8px;"></div>
-
-              <!-- Local Events List Container -->
-              <div id="mapCardEventsList" class="card-events-list" style="display:none; margin-top:8px;"></div>
-
-              <div style="margin-top:12px; padding-top:10px; border-top:1px solid rgba(255,255,255,0.08);">
-                <button class="btn-geo-action" onclick="filterTimelineToCurrentHub()">
-                  📜 View All Events for this Hub in Master Timeline
-                </button>
               </div>
             </div>
-          </div>
-        </div>
-
-        <!-- Master Synchronized Event Timeline Section -->
-        <div id="mapMasterTimelineWrap" style="margin-top: 24px;">
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; flex-wrap:wrap; gap:8px;">
-            <div>
-              <h3 id="timelineHeaderTitle" style="font-size:1.15rem; font-weight:800; color:#fff;">Chronological Master Timeline</h3>
-              <p style="font-size:0.8rem; color:var(--text-secondary); margin-top:2px;">Filterable events across all centuries synchronized directly with the map.</p>
-            </div>
-            <span id="timelineCountBadge" class="era-counter-badge">10,617 Events</span>
-          </div>
-
-          <!-- Timeline Search & Quick Filters -->
-          <div class="timeline-controls-bar">
-            <div class="search-bar-wrap" style="margin-bottom:8px;">
-              <svg class="search-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <circle cx="11" cy="11" r="8"></circle>
-                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-              </svg>
-              <input type="text" id="timelineSearchInput" class="search-input" placeholder="Filter events by ancestor name, town, parish, or year..." oninput="handleTimelineSearch()">
-              <button id="timelineClearBtn" class="search-clear-btn" onclick="clearTimelineSearch()">✕</button>
-            </div>
-
-            <!-- Event Type Filter Chips -->
-            <div class="filter-chips-wrap">
-              <button class="chip active" onclick="setTimelineTypeFilter('all', this)">All Events</button>
-              <button class="chip" onclick="setTimelineTypeFilter('battle', this)">🎖️ Battles & Chronicles</button>
-              <button class="chip" onclick="setTimelineTypeFilter('migration', this)">🚢 Immigrant Journeys</button>
-              <button class="chip" onclick="setTimelineTypeFilter('marriage', this)">💍 Marriages</button>
-              <button class="chip" onclick="setTimelineTypeFilter('birth', this)">🌱 Births</button>
-              <button class="chip" onclick="setTimelineTypeFilter('death', this)">⚰️ Deaths</button>
-            </div>
-          </div>
-
-          <!-- Master Timeline Events List -->
-          <div id="mapTimelineList" class="master-timeline-list" style="margin-top:14px;">
-            <!-- Timeline milestone cards rendered dynamically -->
-          </div>
-
-          <div style="text-align:center; padding: 18px 0;">
-            <button id="loadMoreTimelineBtn" class="chip" onclick="loadMoreTimelineEvents()" style="display:none; margin:0 auto; padding:8px 24px;">
-              Load More Events
-            </button>
           </div>
         </div>
       </section>
@@ -338,23 +373,23 @@
 
     <!-- ================= BOTTOM NAVIGATION ================= -->
     <nav class="bottom-nav">
-      <button class="nav-tab active" onclick="switchTab('search', this)">
+      <button class="nav-tab active" data-tab="search" onclick="switchTab('search', this)">
         <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
         <span>Search</span>
       </button>
-      <button class="nav-tab" onclick="switchTab('tree', this)">
+      <button class="nav-tab" data-tab="tree" onclick="switchTab('tree', this)">
         <svg viewBox="0 0 24 24"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>
         <span>Tree</span>
       </button>
-      <button class="nav-tab" onclick="switchTab('map', this)">
+      <button class="nav-tab" data-tab="map" onclick="switchTab('map', this)">
         <svg viewBox="0 0 24 24"><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"></polygon><line x1="8" y1="2" x2="8" y2="18"></line><line x1="16" y1="6" x2="16" y2="22"></line></svg>
         <span>Map</span>
       </button>
-      <button class="nav-tab" onclick="switchTab('stories', this)">
+      <button class="nav-tab" data-tab="stories" onclick="switchTab('stories', this)">
         <svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path></svg>
         <span>Stories</span>
       </button>
-      <button class="nav-tab" onclick="switchTab('timeline', this)">
+      <button class="nav-tab" data-tab="timeline" onclick="switchTab('timeline', this)">
         <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 14 14"></polyline></svg>
         <span>Origins</span>
       </button>
@@ -381,58 +416,66 @@
 
       <div id="modalTags" style="display:flex; flex-wrap:wrap; gap:6px;"></div>
 
-      <div>
-        <div class="modal-section-title">Vital Events</div>
-        <div class="vital-grid">
-          <div class="vital-box">
-            <div class="vital-label">Birth</div>
-            <div class="vital-val" id="modalBirth">—</div>
+      <div class="modal-body-grid">
+        <!-- Left Column: Vital Events & Ancestral Geography -->
+        <div class="modal-col-vitals">
+          <div>
+            <div class="modal-section-title">Vital Events</div>
+            <div class="vital-grid">
+              <div class="vital-box">
+                <div class="vital-label">Birth</div>
+                <div class="vital-val" id="modalBirth">—</div>
+              </div>
+              <div class="vital-box">
+                <div class="vital-label">Death</div>
+                <div class="vital-val" id="modalDeath">—</div>
+              </div>
+              <div class="vital-box" style="grid-column: 1 / -1;">
+                <div class="vital-label">Burial / Resting Place</div>
+                <div class="vital-val" id="modalBurial">—</div>
+              </div>
+            </div>
           </div>
-          <div class="vital-box">
-            <div class="vital-label">Death</div>
-            <div class="vital-val" id="modalDeath">—</div>
+
+          <!-- Ancestral Geography & Mini-Map -->
+          <div id="modalGeoSection" class="modal-geo-section" style="display:none; margin-top:14px;">
+            <div class="modal-section-title">Ancestral Geography & Origin</div>
+            <div class="geo-badge-row">
+              <span class="geo-pin-icon">📍</span>
+              <span id="modalGeoLocation" class="geo-location-name">—</span>
+            </div>
+            <div id="personMiniMap" class="person-mini-map-frame"></div>
+            <button id="modalViewOnMapBtn" class="btn-geo-action" onclick="openPersonOnMainMap()">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"></polygon>
+                <line x1="8" y1="2" x2="8" y2="18"></line>
+                <line x1="16" y1="6" x2="16" y2="22"></line>
+              </svg>
+              <span>View on Historical Map</span>
+            </button>
           </div>
-          <div class="vital-box" style="grid-column: 1 / -1;">
-            <div class="vital-label">Burial / Resting Place</div>
-            <div class="vital-val" id="modalBurial">—</div>
+        </div>
+
+        <!-- Right Column: Family Relationships -->
+        <div class="modal-col-family">
+          <div>
+            <div class="modal-section-title">Family Relationships</div>
+            
+            <div style="margin-bottom: 12px;">
+              <div style="font-size:0.75rem; color:var(--text-secondary); margin-bottom:4px;">Parents</div>
+              <div class="rel-list" id="modalParents"></div>
+            </div>
+
+            <div style="margin-bottom: 12px;">
+              <div style="font-size:0.75rem; color:var(--text-secondary); margin-bottom:4px;">Spouses</div>
+              <div class="rel-list" id="modalSpouses"></div>
+            </div>
+
+            <div>
+              <div style="font-size:0.75rem; color:var(--text-secondary); margin-bottom:4px;">Children</div>
+              <div class="rel-list" id="modalChildren"></div>
+            </div>
           </div>
-        </div>
-      </div>
-
-      <!-- Ancestral Geography & Mini-Map -->
-      <div id="modalGeoSection" class="modal-geo-section" style="display:none;">
-        <div class="modal-section-title">Ancestral Geography & Origin</div>
-        <div class="geo-badge-row">
-          <span class="geo-pin-icon">📍</span>
-          <span id="modalGeoLocation" class="geo-location-name">—</span>
-        </div>
-        <div id="personMiniMap" class="person-mini-map-frame"></div>
-        <button id="modalViewOnMapBtn" class="btn-geo-action" onclick="openPersonOnMainMap()">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"></polygon>
-            <line x1="8" y1="2" x2="8" y2="18"></line>
-            <line x1="16" y1="6" x2="16" y2="22"></line>
-          </svg>
-          <span>View on Historical Map</span>
-        </button>
-      </div>
-
-      <div>
-        <div class="modal-section-title">Family Relationships</div>
-        
-        <div style="margin-bottom: 10px;">
-          <div style="font-size:0.75rem; color:var(--text-secondary); margin-bottom:4px;">Parents</div>
-          <div class="rel-list" id="modalParents"></div>
-        </div>
-
-        <div style="margin-bottom: 10px;">
-          <div style="font-size:0.75rem; color:var(--text-secondary); margin-bottom:4px;">Spouses</div>
-          <div class="rel-list" id="modalSpouses"></div>
-        </div>
-
-        <div>
-          <div style="font-size:0.75rem; color:var(--text-secondary); margin-bottom:4px;">Children</div>
-          <div class="rel-list" id="modalChildren"></div>
         </div>
       </div>
 
