@@ -116,15 +116,16 @@ function switchTab(tabId, el) {
   
   if (tabId === 'map' && googleMapInstance) {
     google.maps.event.trigger(googleMapInstance, 'resize');
+    const hubs = getEffectiveMapHubs();
     if (currentMapLine === 'jerome') {
       const jeromeBounds = new google.maps.LatLngBounds();
-      MAP_LOCATIONS.filter(l => l.side === 'jerome').forEach(l => {
+      hubs.filter(l => l.side === 'jerome').forEach(l => {
         jeromeBounds.extend(new google.maps.LatLng(l.coords.lat, l.coords.lng));
       });
       googleMapInstance.fitBounds(jeromeBounds);
     } else if (currentMapLine === 'amy') {
       const amyBounds = new google.maps.LatLngBounds();
-      MAP_LOCATIONS.filter(l => l.side === 'amy').forEach(l => {
+      hubs.filter(l => l.side === 'amy').forEach(l => {
         amyBounds.extend(new google.maps.LatLng(l.coords.lat, l.coords.lng));
       });
       googleMapInstance.fitBounds(amyBounds);
@@ -1098,7 +1099,17 @@ const MAP_LOCATIONS = [
     era: '17th',
     coords: { lat: 37.5407, lng: -77.4360 },
     desc: 'Early 17th-century English colonial settlements along the James River where early planters established tobacco homesteads under the Virginia Company charter.',
-    people: ['PWS6-9H3', 'L1LQ-KVD', 'L1LQ-VYF', 'GS3R-S3B', 'KH7V-F79', 'LCCX-WBX']
+    people: ['GS3R-S3B', 'KH7V-F79', 'LCCX-WBX']
+  },
+  {
+    id: 'richmond-va',
+    title: 'Richmond & Henrico County, Virginia',
+    side: 'amy',
+    category: 'cemetery',
+    era: '20th',
+    coords: { lat: 37.5407, lng: -77.4360 },
+    desc: '20th-century home of William Madison Wade Jr. and British war bride Ena Dorothy Wainwright following WWII. Final resting place at Forest Lawn Cemetery.',
+    people: ['L1LQ-KVD', 'L1LQ-VYF', 'PWS6-9H3']
   },
   {
     id: 'swearingen-fort',
@@ -1122,13 +1133,13 @@ const MAP_LOCATIONS = [
   },
   {
     id: 'stonington',
-    title: 'Stonington, Connecticut Colony',
+    title: 'Stonington & New London, Connecticut Colony',
     side: 'amy',
     category: 'immigration',
     era: '17th',
     coords: { lat: 41.3437, lng: -71.9056 },
-    desc: '17th-century Puritan maritime settlement on Long Island Sound, founding home of early colonial New England forebears.',
-    people: ['L1LQ-KVD']
+    desc: '17th-century Puritan maritime settlement on Long Island Sound, founding home of Captain Jesse Billings, Ebenezer Billings, Benjamin Hewitt, Mercy Palmer, and Deacon Gershom Palmer.',
+    people: ['KNC1-RXH', 'LZP7-ZN8', 'LK51-DWM', 'LYVR-1VL', 'LBK1-54L', 'LZ6J-CR8', 'L2V6-225', '9N7L-VT9', 'LH6V-TTS']
   },
   {
     id: 'lauenen',
@@ -1141,6 +1152,16 @@ const MAP_LOCATIONS = [
     people: ['LC7W-N9J', 'LCJ2-YYR', 'GL7K-8H6', 'L71Z-4NJ', 'KV2R-T9R', 'LHDY-GTN', 'G3YJ-C1N', 'KJ6W-ZQH']
   },
   {
+    id: 'ashby-de-la-zouch',
+    title: 'Ashby-de-la-Zouch, Leicestershire, England',
+    side: 'amy',
+    category: 'immigration',
+    era: '20th',
+    coords: { lat: 52.7470, lng: -1.4700 },
+    desc: 'Birthplace of Amy\'s maternal grandmother Ena Dorothy Wainwright (1923). Met American serviceman William Madison Wade Jr. during WWII, married in Leicestershire in 1944, and crossed the Atlantic as a British war bride to build her life in Virginia.',
+    people: ['L1LQ-KVD']
+  },
+  {
     id: 'belton-england',
     title: 'Belton & Leicestershire, England',
     side: 'amy',
@@ -1148,7 +1169,7 @@ const MAP_LOCATIONS = [
     era: '17th',
     coords: { lat: 52.7844, lng: -1.3347 },
     desc: 'English village in the East Midlands, ancestral home of 17th-century English colonists who sailed across the Atlantic for North America.',
-    people: ['L1LQ-KVD', 'PWS6-9H3']
+    people: ['GS3R-S3B', 'KH7V-F79']
   },
   {
     id: 'spain-madrid',
@@ -1361,6 +1382,20 @@ const MAP_ROUTES = [
   }
 ];
 
+function getEffectiveMapHubs() {
+  if (window.GENEALOGY_DATA && window.GENEALOGY_DATA.mapHubs && window.GENEALOGY_DATA.mapHubs.length > 0) {
+    return window.GENEALOGY_DATA.mapHubs;
+  }
+  return MAP_LOCATIONS;
+}
+
+let currentSelectedHub = null;
+let timelineCurrentType = 'all';
+let timelineSearchQuery = '';
+let timelineFilterHubId = null;
+let timelinePage = 1;
+const TIMELINE_PAGE_SIZE = 40;
+
 function initGoogleMap() {
   const mapElement = document.getElementById('googleMap');
   if (!mapElement) return;
@@ -1378,29 +1413,42 @@ function initGoogleMap() {
   ];
 
   googleMapInstance = new google.maps.Map(mapElement, {
-    center: { lat: 28.0, lng: -55.0 },
-    zoom: 3.2,
+    center: { lat: 46.8, lng: -71.2 },
+    zoom: 5,
     styles: darkStyles,
     mapTypeControl: false,
     streetViewControl: false,
-    fullscreenControl: true,
-    zoomControl: true
+    fullscreenControl: false, // We use custom in-map fullscreen button so overlays persist
+    zoomControl: true,
+    zoomControlOptions: {
+      position: google.maps.ControlPosition.RIGHT_BOTTOM
+    }
   });
 
   const jeromeBounds = new google.maps.LatLngBounds();
+  const amyBounds = new google.maps.LatLngBounds();
   mapInitialBounds = new google.maps.LatLngBounds();
 
-  // Distinctive Pin Icons for Jerome vs Amy
+  // Clear existing markers
+  mapMarkers = [];
+  mapPolylines = [];
+
+  // Distinctive Color-Coded Pin Icons
   function getMarkerIcon(loc) {
-    const isAmy = loc.side === 'amy';
-    
-    // Jerome colors: Gold, Emerald, Purple
-    // Amy colors: Rose Coral, Magenta, Cyan
-    let fillColor = isAmy ? '#f43f5e' : '#f59e0b';
-    if (loc.category === 'immigration') {
-      fillColor = isAmy ? '#ec4899' : '#10b981';
-    } else if (loc.category === 'cemetery') {
-      fillColor = isAmy ? '#06b6d4' : '#8b5cf6';
+    let fillColor = '#3b82f6'; // Default Jerome Royal Azure
+
+    if (loc.side === 'both') {
+      fillColor = '#a855f7'; // Shared / Union Purple
+    } else if (loc.side === 'amy') {
+      fillColor = '#f59e0b'; // Amy Warm Amber
+      if (loc.category === 'battle') fillColor = '#ef4444';
+      else if (loc.category === 'immigration') fillColor = '#f43f5e';
+      else if (loc.category === 'cemetery') fillColor = '#9333ea';
+    } else {
+      // Jerome line
+      if (loc.category === 'battle') fillColor = '#ef4444';
+      else if (loc.category === 'immigration') fillColor = '#06b6d4';
+      else if (loc.category === 'cemetery') fillColor = '#8b5cf6';
     }
 
     return {
@@ -1409,23 +1457,27 @@ function initGoogleMap() {
       fillOpacity: 1,
       strokeColor: "#ffffff",
       strokeWeight: 1.5,
-      scale: 1.4,
+      scale: 1.45,
       anchor: new google.maps.Point(12, 22)
     };
   }
 
-  // Add Markers
-  MAP_LOCATIONS.forEach(loc => {
+  // Add Markers for all hubs
+  const effectiveHubs = getEffectiveMapHubs();
+  effectiveHubs.forEach(loc => {
     const latLng = new google.maps.LatLng(loc.coords.lat, loc.coords.lng);
     mapInitialBounds.extend(latLng);
-    if (loc.side === 'jerome') {
+    if (loc.side === 'jerome' || loc.side === 'both') {
       jeromeBounds.extend(latLng);
+    }
+    if (loc.side === 'amy' || loc.side === 'both') {
+      amyBounds.extend(latLng);
     }
 
     const marker = new google.maps.Marker({
       position: latLng,
       map: googleMapInstance,
-      title: loc.title,
+      title: `${loc.title} (${(loc.people || []).length} relatives)`,
       icon: getMarkerIcon(loc)
     });
 
@@ -1436,7 +1488,7 @@ function initGoogleMap() {
     mapMarkers.push({ marker, category: loc.category, era: loc.era, side: loc.side, loc });
   });
 
-  // Add Routes (Polylines)
+  // Add Migration Polylines
   MAP_ROUTES.forEach(route => {
     const polyline = new google.maps.Polyline({
       path: route.path,
@@ -1455,41 +1507,250 @@ function initGoogleMap() {
   });
 
   applyMapFilters();
-  googleMapInstance.fitBounds(jeromeBounds);
-  renderMapEraTimeline('all');
+
+  // Default camera bounds to Jerome's line
+  if (!jeromeBounds.isEmpty()) {
+    googleMapInstance.fitBounds(jeromeBounds);
+  } else {
+    googleMapInstance.fitBounds(mapInitialBounds);
+  }
+
+  // Initialize Master Timeline
+  renderMasterTimeline();
 }
 
 function showMapLocationCard(loc) {
+  currentSelectedHub = loc;
   const card = document.getElementById('mapLocationCard');
+  if (!card) return;
+
+  const sideBadge = document.getElementById('mapCardSideBadge');
+  const eraBadge = document.getElementById('mapCardEraBadge');
   const catEl = document.getElementById('mapCardCategory');
   const titleEl = document.getElementById('mapCardTitle');
+  const regionEl = document.getElementById('mapCardRegion');
   const descEl = document.getElementById('mapCardDesc');
+  const ancCountEl = document.getElementById('mapCardAncestorsCount');
+  const evtCountEl = document.getElementById('mapCardEventsCount');
+  const searchInput = document.getElementById('mapCardSearchInput');
+
+  // Side badge
+  const isAmy = loc.side === 'amy';
+  const isBoth = loc.side === 'both';
+  if (sideBadge) {
+    sideBadge.textContent = isBoth ? '👑 Both Lines' : (isAmy ? '🌸 Amy\'s Line' : '⚜️ Jerome\'s Line');
+    sideBadge.className = isBoth ? 'tag-pill tag-both' : (isAmy ? 'tag-pill tag-amy' : 'tag-pill tag-jerome');
+  }
+
+  // Era badge
+  const eraMap = { '16th': '16e Siècle', '17th': '17e Siècle', '18th': '18e Siècle', '19th': '19e Siècle', '20th': '20e Siècle' };
+  if (eraBadge) eraBadge.textContent = eraMap[loc.era] || 'All Eras';
+
+  // Category
+  if (catEl) catEl.textContent = (loc.category || 'settlement').toUpperCase();
+
+  // Title, Region & Desc
+  if (titleEl) titleEl.textContent = loc.title;
+  if (regionEl) regionEl.textContent = loc.region || '';
+  if (descEl) descEl.textContent = loc.desc;
+
+  if (searchInput) searchInput.value = '';
+
+  // Render Ancestors List
+  const ancestors = loc.people || [];
+  if (ancCountEl) ancCountEl.textContent = ancestors.length;
+  renderCardAncestors(ancestors);
+
+  // Render Local Events List
+  const allEvents = (window.GENEALOGY_DATA && window.GENEALOGY_DATA.timelineEvents) || [];
+  const localEvents = allEvents.filter(ev => {
+    return ev.hid === loc.id || (ev.p && ev.p.some(pid => ancestors.includes(pid)));
+  });
+  if (evtCountEl) evtCountEl.textContent = localEvents.length;
+  renderCardEvents(localEvents);
+
+  // Default to ancestors tab
+  switchCardTab('ancestors');
+
+  // Display card
+  card.classList.remove('minimized');
+  const btnMin = document.getElementById('btnMinimizeCard');
+  if (btnMin) btnMin.textContent = '−';
+  card.style.display = 'flex';
+}
+
+function renderCardAncestors(pids, query = '') {
   const ancEl = document.getElementById('mapCardAncestors');
+  if (!ancEl) return;
 
-  const eraTag = loc.era === '16th' ? '16e SIÈCLE' :
-                 loc.era === '17th' ? '17e SIÈCLE' :
-                 loc.era === '18th' ? '18e SIÈCLE' :
-                 loc.era === '19th' ? '19e SIÈCLE' : '20e SIÈCLE';
+  const q = query.trim().toLowerCase();
+  const filtered = pids.filter(pid => {
+    if (!q) return true;
+    const p = people[pid];
+    if (!p) return false;
+    return p.n.toLowerCase().includes(q) || (p.rel && p.rel.toLowerCase().includes(q)) || (p.b && p.b.includes(q)) || (p.d && p.d.includes(q));
+  });
 
-  const sideTag = loc.side === 'jerome' ? '⚜️ JEROME\'S LINE' : '🌸 AMY\'S LINE';
+  if (filtered.length === 0) {
+    ancEl.innerHTML = `<div style="font-size:0.8rem; color:var(--text-muted); padding:8px 0;">No matching ancestors at this hub.</div>`;
+    return;
+  }
 
-  catEl.textContent = `${sideTag} • ${eraTag} • ${loc.category.toUpperCase()}`;
-  titleEl.textContent = loc.title;
-  descEl.textContent = loc.desc;
-
-  ancEl.innerHTML = (loc.people || []).map(pid => {
+  ancEl.innerHTML = filtered.map(pid => {
     const p = people[pid];
     const pName = p ? p.n : pid;
     const relStr = p ? getPersonRelationship(p) : '';
-    return `<button class="ancestor-link-btn" onclick="openPersonModal('${pid}')">👤 ${escapeHtml(pName)}${relStr ? ` <span class="btn-subtext">(${escapeHtml(relStr)})</span>` : ''}</button>`;
+    const dateStr = p ? ((p.b ? `b. ${p.b.substring(0,4)}` : '') + (p.d ? ` • d. ${p.d.substring(0,4)}` : '')) : '';
+    const sidePill = p && p.s === 'amy' ? '🌸' : '⚜️';
+    return `
+      <button class="ancestor-link-btn" onclick="openPersonModal('${pid}')" style="display:flex; justify-content:space-between; align-items:center; width:100%; text-align:left;">
+        <div>
+          <span>${sidePill} ${escapeHtml(pName)}</span>
+          ${relStr ? `<div style="font-size:0.68rem; color:var(--accent-gold);">${escapeHtml(relStr)}</div>` : ''}
+        </div>
+        ${dateStr ? `<span style="font-size:0.68rem; color:var(--text-muted); font-weight:600;">${dateStr}</span>` : ''}
+      </button>
+    `;
   }).join('');
+}
 
-  card.style.display = 'block';
-  card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+function renderCardEvents(events) {
+  const listEl = document.getElementById('mapCardEventsList');
+  if (!listEl) return;
+
+  if (events.length === 0) {
+    listEl.innerHTML = `<div style="font-size:0.8rem; color:var(--text-muted); padding:8px 0;">No chronicle events recorded for this hub.</div>`;
+    return;
+  }
+
+  const iconMap = { battle: '🎖️', migration: '🚢', marriage: '💍', birth: '🌱', death: '⚰️' };
+  listEl.innerHTML = events.slice(0, 30).map(ev => {
+    const icon = iconMap[ev.t] || '📍';
+    return `
+      <div class="card-event-item" onclick="flyToTimelineEvent('${ev.id}')">
+        <div>
+          <span style="font-weight:700; color:#fff;">${icon} ${ev.y}:</span>
+          <span style="color:var(--text-secondary); margin-left:4px;">${escapeHtml(ev.title)}</span>
+          ${ev.rel ? `<div style="font-size:0.65rem; color:var(--accent-gold); margin-top:2px;">${escapeHtml(ev.rel)}</div>` : ''}
+        </div>
+        <span style="font-size:0.7rem; color:var(--accent-gold); font-weight:600; flex-shrink:0; margin-left:8px;">📍 View</span>
+      </div>
+    `;
+  }).join('');
+}
+
+function handleMapCardSearch() {
+  const input = document.getElementById('mapCardSearchInput');
+  if (!input || !currentSelectedHub) return;
+  renderCardAncestors(currentSelectedHub.people || [], input.value);
+}
+
+function switchCardTab(tabName) {
+  const tabAnc = document.getElementById('tabCardAncestors');
+  const tabEvt = document.getElementById('tabCardEvents');
+  const ancList = document.getElementById('mapCardAncestors');
+  const evtList = document.getElementById('mapCardEventsList');
+  const searchWrap = document.querySelector('.in-map-search-wrap');
+
+  if (tabName === 'ancestors') {
+    if (tabAnc) tabAnc.classList.add('active');
+    if (tabEvt) tabEvt.classList.remove('active');
+    if (ancList) ancList.style.display = 'block';
+    if (evtList) evtList.style.display = 'none';
+    if (searchWrap) searchWrap.style.display = 'block';
+  } else {
+    if (tabAnc) tabAnc.classList.remove('active');
+    if (tabEvt) tabEvt.classList.add('active');
+    if (ancList) ancList.style.display = 'none';
+    if (evtList) evtList.style.display = 'flex';
+    if (searchWrap) searchWrap.style.display = 'none';
+  }
+}
+
+function toggleMapCardMinimize() {
+  const card = document.getElementById('mapLocationCard');
+  const btn = document.getElementById('btnMinimizeCard');
+  if (!card) return;
+  card.classList.toggle('minimized');
+  if (btn) btn.textContent = card.classList.contains('minimized') ? '+' : '−';
 }
 
 function closeMapCard() {
-  document.getElementById('mapLocationCard').style.display = 'none';
+  const card = document.getElementById('mapLocationCard');
+  if (card) card.style.display = 'none';
+  currentSelectedHub = null;
+}
+
+function toggleMapLegend() {
+  const body = document.getElementById('legendBody');
+  const icon = document.getElementById('legendToggleIcon');
+  if (!body) return;
+  body.classList.toggle('collapsed');
+  if (icon) icon.classList.toggle('rotated');
+}
+
+function toggleMapFullscreen() {
+  const wrapper = document.getElementById('mapContainerWrapper');
+  if (!wrapper) return;
+
+  if (document.fullscreenEnabled || document.webkitFullscreenEnabled) {
+    if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+      if (wrapper.requestFullscreen) {
+        wrapper.requestFullscreen().catch(() => toggleFallbackFullscreen(wrapper));
+      } else if (wrapper.webkitRequestFullscreen) {
+        wrapper.webkitRequestFullscreen();
+      }
+      return;
+    } else {
+      if (document.exitFullscreen) document.exitFullscreen();
+      else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+      return;
+    }
+  }
+  toggleFallbackFullscreen(wrapper);
+}
+
+function toggleFallbackFullscreen(wrapper) {
+  wrapper.classList.toggle('is-fullscreen');
+  const isFs = wrapper.classList.contains('is-fullscreen');
+  const btn = document.getElementById('btnMapFullscreen');
+  if (btn) btn.textContent = isFs ? '✕ Exit Fullscreen' : '⛶ Fullscreen';
+  if (googleMapInstance) {
+    setTimeout(() => {
+      google.maps.event.trigger(googleMapInstance, 'resize');
+    }, 150);
+  }
+}
+
+document.addEventListener('fullscreenchange', () => {
+  const isFs = !!document.fullscreenElement;
+  const btn = document.getElementById('btnMapFullscreen');
+  if (btn) btn.textContent = isFs ? '✕ Exit Fullscreen' : '⛶ Fullscreen';
+  if (googleMapInstance) {
+    setTimeout(() => {
+      google.maps.event.trigger(googleMapInstance, 'resize');
+    }, 150);
+  }
+});
+
+function resetMapView() {
+  if (!googleMapInstance) return;
+  const effectiveHubs = getEffectiveMapHubs();
+  if (currentMapLine === 'jerome') {
+    const jeromeBounds = new google.maps.LatLngBounds();
+    effectiveHubs.filter(l => l.side === 'jerome' || l.side === 'both').forEach(l => {
+      jeromeBounds.extend(new google.maps.LatLng(l.coords.lat, l.coords.lng));
+    });
+    googleMapInstance.fitBounds(jeromeBounds);
+  } else if (currentMapLine === 'amy') {
+    const amyBounds = new google.maps.LatLngBounds();
+    effectiveHubs.filter(l => l.side === 'amy' || l.side === 'both').forEach(l => {
+      amyBounds.extend(new google.maps.LatLng(l.coords.lat, l.coords.lng));
+    });
+    googleMapInstance.fitBounds(amyBounds);
+  } else if (mapInitialBounds) {
+    googleMapInstance.fitBounds(mapInitialBounds);
+  }
 }
 
 function setMapLine(line, el) {
@@ -1498,27 +1759,12 @@ function setMapLine(line, el) {
   if (el) el.classList.add('active');
 
   applyMapFilters();
+  resetMapView();
 
-  // Camera fly-to and bounds based on selected family line
-  if (googleMapInstance) {
-    if (line === 'jerome') {
-      const jeromeBounds = new google.maps.LatLngBounds();
-      MAP_LOCATIONS.filter(l => l.side === 'jerome').forEach(l => {
-        jeromeBounds.extend(new google.maps.LatLng(l.coords.lat, l.coords.lng));
-      });
-      googleMapInstance.fitBounds(jeromeBounds);
-    } else if (line === 'amy') {
-      const amyBounds = new google.maps.LatLngBounds();
-      MAP_LOCATIONS.filter(l => l.side === 'amy').forEach(l => {
-        amyBounds.extend(new google.maps.LatLng(l.coords.lat, l.coords.lng));
-      });
-      googleMapInstance.fitBounds(amyBounds);
-    } else {
-      googleMapInstance.fitBounds(mapInitialBounds);
-    }
-  }
-
-  renderMapEraTimeline(currentMapEra);
+  // Reset hub filter on line change & refresh master timeline
+  timelineFilterHubId = null;
+  timelinePage = 1;
+  renderMasterTimeline();
 }
 
 function setMapEra(era, el) {
@@ -1528,7 +1774,6 @@ function setMapEra(era, el) {
 
   applyMapFilters();
 
-  // Smooth camera fly-to based on era
   if (googleMapInstance) {
     if (era === '17th') {
       googleMapInstance.panTo({ lat: 38.0, lng: -45.0 });
@@ -1548,25 +1793,12 @@ function setMapEra(era, el) {
       googleMapInstance.panTo({ lat: 44.8, lng: -67.5 });
       googleMapInstance.setZoom(5.8);
     } else {
-      if (currentMapLine === 'jerome') {
-        const jeromeBounds = new google.maps.LatLngBounds();
-        MAP_LOCATIONS.filter(l => l.side === 'jerome').forEach(l => {
-          jeromeBounds.extend(new google.maps.LatLng(l.coords.lat, l.coords.lng));
-        });
-        googleMapInstance.fitBounds(jeromeBounds);
-      } else if (currentMapLine === 'amy') {
-        const amyBounds = new google.maps.LatLngBounds();
-        MAP_LOCATIONS.filter(l => l.side === 'amy').forEach(l => {
-          amyBounds.extend(new google.maps.LatLng(l.coords.lat, l.coords.lng));
-        });
-        googleMapInstance.fitBounds(amyBounds);
-      } else if (mapInitialBounds) {
-        googleMapInstance.fitBounds(mapInitialBounds);
-      }
+      resetMapView();
     }
   }
 
-  renderMapEraTimeline(era);
+  timelinePage = 1;
+  renderMasterTimeline();
 }
 
 function setMapFilter(cat, el) {
@@ -1579,10 +1811,16 @@ function setMapFilter(cat, el) {
 
 function applyMapFilters() {
   mapMarkers.forEach(m => {
-    const lineMatch = (currentMapLine === 'all') || (m.side === currentMapLine);
+    let lineMatch = true;
+    if (currentMapLine === 'jerome') {
+      lineMatch = (m.side === 'jerome');
+    } else if (currentMapLine === 'amy') {
+      lineMatch = (m.side === 'amy');
+    }
+
     const eraMatch = (currentMapEra === 'all') || (m.era === currentMapEra);
     const catMatch = (currentMapCategory === 'all') || (m.category === currentMapCategory);
-    
+
     if (lineMatch && eraMatch && catMatch) {
       m.marker.setMap(googleMapInstance);
     } else {
@@ -1591,10 +1829,18 @@ function applyMapFilters() {
   });
 
   mapPolylines.forEach(p => {
-    // Strictly isolate lines: 'both' (Pan-American Union) only shows in 'all' view!
-    const lineMatch = (currentMapLine === 'all') ? true : (p.side === currentMapLine);
+    // Strictly isolate lines: Jerome view never shows Amy routes or the Pan-American Union
+    let lineMatch = false;
+    if (currentMapLine === 'jerome') {
+      lineMatch = (p.side === 'jerome');
+    } else if (currentMapLine === 'amy') {
+      lineMatch = (p.side === 'amy');
+    } else {
+      lineMatch = true;
+    }
+
     const eraMatch = (currentMapEra === 'all') || (p.era === currentMapEra);
-    
+
     if (lineMatch && eraMatch) {
       p.polyline.setMap(googleMapInstance);
     } else {
@@ -1603,55 +1849,204 @@ function applyMapFilters() {
   });
 }
 
-function renderMapEraTimeline(era) {
-  const container = document.getElementById('mapEraTimelineList');
-  const badge = document.getElementById('eraTimelineBadge');
-  const title = document.getElementById('eraTimelineTitle');
+// ================= MASTER SYNCHRONIZED EVENT TIMELINE =================
+function renderMasterTimeline() {
+  const container = document.getElementById('mapTimelineList');
+  const countBadge = document.getElementById('timelineCountBadge');
+  const titleEl = document.getElementById('timelineHeaderTitle');
+  const loadMoreBtn = document.getElementById('loadMoreTimelineBtn');
   if (!container) return;
 
-  const filteredLocs = MAP_LOCATIONS.filter(l => {
-    const lineMatch = currentMapLine === 'all' || l.side === currentMapLine;
-    const eraMatch = era === 'all' || l.era === era;
-    return lineMatch && eraMatch;
+  const rawEvents = (window.GENEALOGY_DATA && window.GENEALOGY_DATA.timelineEvents) || [];
+  
+  // Filter events
+  let filtered = rawEvents.filter(ev => {
+    // 1. Line Filter
+    if (currentMapLine === 'jerome' && ev.s === 'amy') return false;
+    if (currentMapLine === 'amy' && ev.s === 'jerome') return false;
+
+    // 2. Era Filter
+    if (currentMapEra !== 'all' && ev.era !== currentMapEra) return false;
+
+    // 3. Event Type Filter
+    if (timelineCurrentType !== 'all' && ev.t !== timelineCurrentType) return false;
+
+    // 4. Hub Filter (if user focused on a specific hub)
+    if (timelineFilterHubId && ev.hid !== timelineFilterHubId) return false;
+
+    // 5. Search Query
+    if (timelineSearchQuery) {
+      const q = timelineSearchQuery.toLowerCase();
+      const matchTitle = ev.title && ev.title.toLowerCase().includes(q);
+      const matchPn = ev.pn && ev.pn.toLowerCase().includes(q);
+      const matchPl = ev.pl && ev.pl.toLowerCase().includes(q);
+      const matchYear = String(ev.y).includes(q);
+      const matchRel = ev.rel && ev.rel.toLowerCase().includes(q);
+      if (!matchTitle && !matchPn && !matchPl && !matchYear && !matchRel) return false;
+    }
+
+    return true;
   });
 
-  if (badge) badge.textContent = `${filteredLocs.length} Historical Sites`;
-  
-  if (title) {
-    const linePrefix = currentMapLine === 'jerome' ? '⚜️ Jerome\'s Line' :
-                       currentMapLine === 'amy' ? '🌸 Amy\'s Line' : '👑 Both Family Lines';
-    title.textContent = `${linePrefix} • Historical Chronicles`;
+  // Update counts & title
+  const totalMatching = filtered.length;
+  const visibleLimit = timelinePage * TIMELINE_PAGE_SIZE;
+  const visibleEvents = filtered.slice(0, visibleLimit);
+
+  if (countBadge) {
+    countBadge.textContent = `${Math.min(visibleLimit, totalMatching).toLocaleString()} of ${totalMatching.toLocaleString()} Events`;
   }
 
-  container.innerHTML = filteredLocs.map(loc => {
-    const isAmy = loc.side === 'amy';
-    const sidePill = isAmy ? '<span class="tag-pill tag-amy" style="font-size:0.65rem;">🌸 Amy\'s Line</span>' :
-                             '<span class="tag-pill tag-jerome" style="font-size:0.65rem;">⚜️ Jerome\'s Line</span>';
+  if (titleEl) {
+    const linePrefix = currentMapLine === 'jerome' ? '⚜️ Jerome\'s Line' :
+                       currentMapLine === 'amy' ? '🌸 Amy\'s Line' : '👑 Both Family Lines';
+    const hubSuffix = timelineFilterHubId ? ` • Hub: ${escapeHtml(currentSelectedHub ? currentSelectedHub.title : timelineFilterHubId)}` : '';
+    titleEl.textContent = `${linePrefix} • Historical Master Timeline${hubSuffix}`;
+  }
 
-    const peoplePills = (loc.people || []).map(pid => {
-      const p = people[pid];
-      const pName = p ? p.n : pid;
-      const relStr = p ? getPersonRelationship(p) : '';
-      return `<button class="ancestor-link-btn" onclick="openPersonModal('${pid}')">👤 ${escapeHtml(pName)}${relStr ? ` <span class="btn-subtext">(${escapeHtml(relStr)})</span>` : ''}</button>`;
-    }).join('');
+  if (loadMoreBtn) {
+    loadMoreBtn.style.display = (visibleLimit < totalMatching) ? 'block' : 'none';
+  }
+
+  if (visibleEvents.length === 0) {
+    container.innerHTML = `
+      <div style="text-align:center; padding:32px 16px; color:var(--text-muted); background:var(--bg-card); border-radius:var(--radius-md); border:1px solid var(--border-color);">
+        <div style="font-size:1.8rem; margin-bottom:8px;">🔍</div>
+        <div style="font-weight:700; color:#fff; margin-bottom:4px;">No Events Found</div>
+        <div style="font-size:0.85rem;">No timeline events match the active line, era, or search filters.</div>
+        <button class="chip" onclick="resetTimelineFilters()" style="margin-top:12px;">Reset Filters</button>
+      </div>
+    `;
+    return;
+  }
+
+  const iconMap = { battle: '🎖️', migration: '🚢', marriage: '💍', birth: '🌱', death: '⚰️' };
+  const eraLabelMap = { '16th': '16e Siècle', '17th': '17e Siècle', '18th': '18e Siècle', '19th': '19e Siècle', '20th': '20e Siècle' };
+
+  container.innerHTML = visibleEvents.map(ev => {
+    const isAmy = ev.s === 'amy';
+    const isBoth = ev.s === 'both';
+    const sidePill = isBoth ? '<span class="tag-pill tag-both" style="font-size:0.65rem;">👑 Both Lines</span>' :
+                     (isAmy ? '<span class="tag-pill tag-amy" style="font-size:0.65rem;">🌸 Amy\'s Line</span>' :
+                              '<span class="tag-pill tag-jerome" style="font-size:0.65rem;">⚜️ Jerome\'s Line</span>');
+
+    const icon = iconMap[ev.t] || '📍';
+    const eraLabel = eraLabelMap[ev.era] || 'Historical';
+    const hasCoords = ev.coords && ev.coords.length === 2;
 
     return `
-      <div class="era-timeline-card" onclick="focusOnMapLocation(${loc.coords.lat}, ${loc.coords.lng}, '${escapeHtml(loc.title)}')">
-        <div class="era-timeline-card-header">
-          <div style="display:flex; align-items:center; gap:6px;">
-            ${sidePill}
-            <span class="story-conflict" style="font-size:0.68rem;">${escapeHtml(loc.category.toUpperCase())}</span>
-          </div>
-          <span style="font-size:0.75rem; color:var(--accent-gold); font-weight:700;">📍 Focus Map</span>
+      <div class="timeline-event-card" onclick="flyToTimelineEvent('${ev.id}')">
+        <div class="timeline-event-year-badge">
+          <div class="timeline-year-num">${ev.y}</div>
+          <div class="timeline-event-type-icon">${icon}</div>
         </div>
-        <div class="era-timeline-card-title">${escapeHtml(loc.title)}</div>
-        <div class="era-timeline-card-desc">${escapeHtml(loc.desc)}</div>
-        <div class="story-ancestors" style="margin-top:6px;" onclick="event.stopPropagation()">
-          ${peoplePills}
+
+        <div class="timeline-event-body">
+          <div class="timeline-event-meta-row">
+            ${sidePill}
+            <span class="era-counter-badge" style="font-size:0.65rem;">${eraLabel}</span>
+            <span class="story-conflict" style="font-size:0.65rem;">${escapeHtml((ev.t || '').toUpperCase())}</span>
+            ${hasCoords ? '<span style="font-size:0.7rem; color:var(--accent-gold); font-weight:700; margin-left:auto;">📍 Map Pin</span>' : ''}
+          </div>
+
+          <div class="timeline-event-title">${escapeHtml(ev.title)}</div>
+          
+          ${ev.rel ? `<div style="font-size:0.72rem; color:var(--accent-gold); font-weight:600; margin-top:2px;">👤 ${escapeHtml(ev.rel)}</div>` : ''}
+
+          <div class="timeline-event-desc">${escapeHtml(ev.desc || '')}</div>
+
+          ${ev.pl ? `
+            <div class="timeline-event-place-row">
+              <span>📍 ${escapeHtml(ev.pl)}</span>
+            </div>
+          ` : ''}
         </div>
       </div>
     `;
   }).join('');
+}
+
+function setTimelineTypeFilter(type, el) {
+  timelineCurrentType = type;
+  document.querySelectorAll('#mapMasterTimelineWrap .filter-chips-wrap .chip').forEach(c => c.classList.remove('active'));
+  if (el) el.classList.add('active');
+  timelinePage = 1;
+  renderMasterTimeline();
+}
+
+function handleTimelineSearch() {
+  const input = document.getElementById('timelineSearchInput');
+  timelineSearchQuery = input ? input.value.trim() : '';
+  timelinePage = 1;
+  renderMasterTimeline();
+}
+
+function clearTimelineSearch() {
+  const input = document.getElementById('timelineSearchInput');
+  if (input) input.value = '';
+  timelineSearchQuery = '';
+  timelinePage = 1;
+  renderMasterTimeline();
+}
+
+function loadMoreTimelineEvents() {
+  timelinePage++;
+  renderMasterTimeline();
+}
+
+function resetTimelineFilters() {
+  timelineCurrentType = 'all';
+  timelineSearchQuery = '';
+  timelineFilterHubId = null;
+  timelinePage = 1;
+  const input = document.getElementById('timelineSearchInput');
+  if (input) input.value = '';
+  document.querySelectorAll('#mapMasterTimelineWrap .filter-chips-wrap .chip').forEach((c, idx) => {
+    if (idx === 0) c.classList.add('active');
+    else c.classList.remove('active');
+  });
+  renderMasterTimeline();
+}
+
+function filterTimelineToCurrentHub() {
+  if (!currentSelectedHub) return;
+  timelineFilterHubId = currentSelectedHub.id;
+  timelinePage = 1;
+  renderMasterTimeline();
+  const timelineEl = document.getElementById('mapMasterTimelineWrap');
+  if (timelineEl) {
+    timelineEl.scrollIntoView({ behavior: 'smooth' });
+  }
+}
+
+function flyToTimelineEvent(eventId) {
+  const allEvents = (window.GENEALOGY_DATA && window.GENEALOGY_DATA.timelineEvents) || [];
+  const ev = allEvents.find(e => e.id === eventId);
+  if (!ev) return;
+
+  switchTab('map');
+
+  if (ev.coords && googleMapInstance) {
+    google.maps.event.trigger(googleMapInstance, 'resize');
+    googleMapInstance.panTo({ lat: ev.coords[0], lng: ev.coords[1] });
+    googleMapInstance.setZoom(10);
+  }
+
+  // Find matching hub and show in-map card
+  const effectiveHubs = getEffectiveMapHubs();
+  let matchedHub = null;
+  if (ev.hid) {
+    matchedHub = effectiveHubs.find(h => h.id === ev.hid);
+  }
+  if (!matchedHub && ev.coords) {
+    matchedHub = effectiveHubs.find(h => 
+      Math.abs(h.coords.lat - ev.coords[0]) < 0.15 && Math.abs(h.coords.lng - ev.coords[1]) < 0.15
+    );
+  }
+
+  if (matchedHub) {
+    showMapLocationCard(matchedHub);
+  }
 }
 
 function focusOnMapLocation(lat, lng, title, zoom = 9) {
@@ -1662,8 +2057,9 @@ function focusOnMapLocation(lat, lng, title, zoom = 9) {
     googleMapInstance.setZoom(zoom);
   }
 
-  const matched = MAP_LOCATIONS.find(l => 
-    Math.abs(l.coords.lat - lat) < 0.08 && Math.abs(l.coords.lng - lng) < 0.08
+  const effectiveHubs = getEffectiveMapHubs();
+  const matched = effectiveHubs.find(l => 
+    Math.abs(l.coords.lat - lat) < 0.12 && Math.abs(l.coords.lng - lng) < 0.12
   );
 
   if (matched) {

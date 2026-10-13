@@ -182,32 +182,128 @@
           <button class="chip" onclick="setMapFilter('cemetery', this)">⛪ Cemeteries & Missions</button>
         </div>
 
-        <div id="googleMap" class="map-frame"></div>
+        <!-- Map Container Wrapper with In-Map Overlays (Preserved in Fullscreen) -->
+        <div id="mapContainerWrapper" class="map-container-wrapper">
+          <div id="googleMap" class="map-frame"></div>
 
-        <!-- Selected Location Details Box -->
-        <div id="mapLocationCard" class="map-info-card" style="display:none;">
-          <div style="display:flex; justify-content:space-between; align-items:flex-start;">
-            <div>
-              <span id="mapCardCategory" class="story-conflict">Category</span>
-              <h3 id="mapCardTitle" style="font-size:1.15rem; font-weight:700; color:#fff; margin-top:2px;">Location</h3>
-            </div>
-            <button class="modal-close-btn" onclick="closeMapCard()">✕</button>
+          <!-- In-Map Fullscreen and Camera Controls -->
+          <div class="in-map-controls">
+            <button class="in-map-btn" id="btnMapFullscreen" onclick="toggleMapFullscreen()" title="Toggle Fullscreen Map">⛶ Fullscreen</button>
+            <button class="in-map-btn" onclick="resetMapView()" title="Reset Camera">↺ Reset View</button>
           </div>
-          <p id="mapCardDesc" style="font-size:0.85rem; color:var(--text-secondary); line-height:1.5; margin-top:6px;"></p>
-          <div style="margin-top:10px;">
-            <div style="font-size:0.72rem; color:var(--text-muted); text-transform:uppercase; font-weight:700; margin-bottom:4px;">Connected Relatives</div>
-            <div id="mapCardAncestors" class="story-ancestors"></div>
+
+          <!-- In-Map Color Key / Legend -->
+          <div id="mapLegendControl" class="in-map-legend">
+            <div class="legend-header" onclick="toggleMapLegend()">
+              <span class="legend-title">🗺️ Map Key</span>
+              <span id="legendToggleIcon" class="legend-toggle-icon">▾</span>
+            </div>
+            <div id="legendBody" class="legend-body">
+              <div class="legend-item"><span class="legend-dot dot-jerome"></span> ⚜️ Jerome (Quebec, Acadia, France)</div>
+              <div class="legend-item"><span class="legend-dot dot-amy"></span> 🌸 Amy (Colombia, South US, Swiss, England)</div>
+              <div class="legend-item"><span class="legend-dot dot-both"></span> 👑 Both / Shared Lines</div>
+              <div class="legend-divider"></div>
+              <div class="legend-item"><span class="legend-icon">🚢</span> Migrations & Pioneer Harbors</div>
+              <div class="legend-item"><span class="legend-icon">🎖️</span> Battles & Historic Forts</div>
+              <div class="legend-item"><span class="legend-icon">⛪</span> Cemeteries & Resting Places</div>
+              <div class="legend-item"><span class="legend-icon">🏛️</span> Colonial Parishes & Settlements</div>
+            </div>
+          </div>
+
+          <!-- In-Map Selected Location Details Box (Glassmorphic Bottom Sheet / Floating Card) -->
+          <div id="mapLocationCard" class="map-info-card in-map-card" style="display:none;">
+            <div class="bottom-sheet-handle" onclick="toggleMapCardMinimize()"></div>
+            
+            <div class="in-map-card-header">
+              <div>
+                <div style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">
+                  <span id="mapCardSideBadge" class="tag-pill tag-jerome" style="font-size:0.65rem;">⚜️ Jerome's Line</span>
+                  <span id="mapCardEraBadge" class="era-counter-badge" style="font-size:0.65rem;">17e Siècle</span>
+                  <span id="mapCardCategory" class="story-conflict" style="font-size:0.65rem;">SETTLEMENT</span>
+                </div>
+                <h3 id="mapCardTitle" class="in-map-card-title">Location Name</h3>
+                <div id="mapCardRegion" class="in-map-card-region">Region</div>
+              </div>
+              <div class="in-map-card-actions">
+                <button class="in-map-mini-btn" id="btnMinimizeCard" onclick="toggleMapCardMinimize()" title="Minimize / Expand">−</button>
+                <button class="in-map-mini-btn" onclick="closeMapCard()" title="Close">✕</button>
+              </div>
+            </div>
+
+            <div class="card-scroll-area" id="mapCardScrollArea">
+              <p id="mapCardDesc" class="in-map-card-desc"></p>
+
+              <!-- In-Card Tabs: Relatives vs Events -->
+              <div class="in-map-tab-bar">
+                <button class="in-map-tab active" id="tabCardAncestors" onclick="switchCardTab('ancestors')">
+                  Ancestors (<span id="mapCardAncestorsCount">0</span>)
+                </button>
+                <button class="in-map-tab" id="tabCardEvents" onclick="switchCardTab('events')">
+                  Local Events (<span id="mapCardEventsCount">0</span>)
+                </button>
+              </div>
+
+              <!-- Search inside card -->
+              <div class="in-map-search-wrap">
+                <input type="text" id="mapCardSearchInput" class="in-map-search-input" placeholder="Search people at this location..." oninput="handleMapCardSearch()">
+              </div>
+
+              <!-- Ancestors List Container -->
+              <div id="mapCardAncestors" class="story-ancestors" style="margin-top:8px;"></div>
+
+              <!-- Local Events List Container -->
+              <div id="mapCardEventsList" class="card-events-list" style="display:none; margin-top:8px;"></div>
+
+              <div style="margin-top:12px; padding-top:10px; border-top:1px solid rgba(255,255,255,0.08);">
+                <button class="btn-geo-action" onclick="filterTimelineToCurrentHub()">
+                  📜 View All Events for this Hub in Master Timeline
+                </button>
+              </div>
+            </div>
           </div>
         </div>
 
-        <!-- Synchronized Era Timeline Reel -->
-        <div id="mapEraTimelineWrap" style="margin-top: 18px;">
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-            <h3 id="eraTimelineTitle" style="font-size:1.05rem; font-weight:700; color:#fff;">Historical Milestones</h3>
-            <span id="eraTimelineBadge" class="era-counter-badge">Events</span>
+        <!-- Master Synchronized Event Timeline Section -->
+        <div id="mapMasterTimelineWrap" style="margin-top: 24px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px; flex-wrap:wrap; gap:8px;">
+            <div>
+              <h3 id="timelineHeaderTitle" style="font-size:1.15rem; font-weight:800; color:#fff;">Chronological Master Timeline</h3>
+              <p style="font-size:0.8rem; color:var(--text-secondary); margin-top:2px;">Filterable events across all centuries synchronized directly with the map.</p>
+            </div>
+            <span id="timelineCountBadge" class="era-counter-badge">10,617 Events</span>
           </div>
-          <div id="mapEraTimelineList" class="era-timeline-grid">
+
+          <!-- Timeline Search & Quick Filters -->
+          <div class="timeline-controls-bar">
+            <div class="search-bar-wrap" style="margin-bottom:8px;">
+              <svg class="search-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="11" cy="11" r="8"></circle>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+              </svg>
+              <input type="text" id="timelineSearchInput" class="search-input" placeholder="Filter events by ancestor name, town, parish, or year..." oninput="handleTimelineSearch()">
+              <button id="timelineClearBtn" class="search-clear-btn" onclick="clearTimelineSearch()">✕</button>
+            </div>
+
+            <!-- Event Type Filter Chips -->
+            <div class="filter-chips-wrap">
+              <button class="chip active" onclick="setTimelineTypeFilter('all', this)">All Events</button>
+              <button class="chip" onclick="setTimelineTypeFilter('battle', this)">🎖️ Battles & Chronicles</button>
+              <button class="chip" onclick="setTimelineTypeFilter('migration', this)">🚢 Immigrant Journeys</button>
+              <button class="chip" onclick="setTimelineTypeFilter('marriage', this)">💍 Marriages</button>
+              <button class="chip" onclick="setTimelineTypeFilter('birth', this)">🌱 Births</button>
+              <button class="chip" onclick="setTimelineTypeFilter('death', this)">⚰️ Deaths</button>
+            </div>
+          </div>
+
+          <!-- Master Timeline Events List -->
+          <div id="mapTimelineList" class="master-timeline-list" style="margin-top:14px;">
             <!-- Timeline milestone cards rendered dynamically -->
+          </div>
+
+          <div style="text-align:center; padding: 18px 0;">
+            <button id="loadMoreTimelineBtn" class="chip" onclick="loadMoreTimelineEvents()" style="display:none; margin:0 auto; padding:8px 24px;">
+              Load More Events
+            </button>
           </div>
         </div>
       </section>
