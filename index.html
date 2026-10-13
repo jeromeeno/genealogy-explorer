@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Eno-Whisenhunt Family Genealogy</title>
+  <meta name="description" content="Interactive genealogical explorer for the Eno and Whisenhunt families back to 1600.">
+  <meta name="theme-color" content="#0b0f17">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Eno Heritage">
+  <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <!-- ================= PIN LOCK SCREEN ================= -->
+  <div id="lockScreen">
+    <div class="lock-box">
+      <div class="lock-crest">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+          <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+        </svg>
+      </div>
+      <h1 class="lock-title">Eno Family Heritage</h1>
+      <p class="lock-subtitle">Enter your 4-digit security PIN</p>
+
+      <div class="pin-dots" id="pinDots">
+        <div class="pin-dot" id="dot0"></div>
+        <div class="pin-dot" id="dot1"></div>
+        <div class="pin-dot" id="dot2"></div>
+        <div class="pin-dot" id="dot3"></div>
+      </div>
+
+      <div class="pin-keypad">
+        <button class="pin-key" onclick="pressKey('1')">1</button>
+        <button class="pin-key" onclick="pressKey('2')">2</button>
+        <button class="pin-key" onclick="pressKey('3')">3</button>
+        <button class="pin-key" onclick="pressKey('4')">4</button>
+        <button class="pin-key" onclick="pressKey('5')">5</button>
+        <button class="pin-key" onclick="pressKey('6')">6</button>
+        <button class="pin-key" onclick="pressKey('7')">7</button>
+        <button class="pin-key" onclick="pressKey('8')">8</button>
+        <button class="pin-key" onclick="pressKey('9')">9</button>
+        <button class="pin-key key-action" onclick="clearPin()">Clear</button>
+        <button class="pin-key" onclick="pressKey('0')">0</button>
+        <button class="pin-key key-action" onclick="deletePin()">⌫</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= MAIN APPLICATION ================= -->
+  <div id="appContainer">
+    <!-- Header -->
+    <header class="app-header">
+      <div class="brand-wrap">
+        <div class="brand-icon">⚜️</div>
+        <div>
+          <div class="brand-title">Eno-Whisenhunt Heritage</div>
+          <div class="brand-sub" id="headerSubtitle">4,631 Documented Ancestors • ~1600</div>
+        </div>
+      </div>
+      <div class="header-actions">
+        <button class="btn-icon" onclick="lockApp()" title="Lock App">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+            <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- Main Views Container -->
+    <main class="view-container">
+
+      <!-- ================= VIEW 1: DIRECTORY / SEARCH ================= -->
+      <section id="view-search" class="view-section active">
+        <div class="search-bar-wrap">
+          <svg class="search-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+          </svg>
+          <input type="text" id="searchInput" class="search-input" placeholder="Search by name, place, or ID..." oninput="handleSearch()">
+          <button id="searchClearBtn" class="search-clear-btn" onclick="clearSearch()">✕</button>
+        </div>
+
+        <div class="filter-chips-wrap">
+          <button class="chip active" onclick="setFilter('all', this)">All (4,631)</button>
+          <button class="chip" onclick="setFilter('jerome', this)">Jerome's Line</button>
+          <button class="chip" onclick="setFilter('amy', this)">Amy's Line</button>
+          <button class="chip" onclick="setFilter('war', this)">🎖️ War Heroes</button>
+          <button class="chip" onclick="setFilter('immigrant', this)">🚢 Immigrants</button>
+          <button class="chip" onclick="setFilter('fallriver', this)">Fall River, MA</button>
+          <button class="chip" onclick="setFilter('lowell', this)">Lowell, MA</button>
+          <button class="chip" onclick="setFilter('groton', this)">Groton, MA</button>
+        </div>
+
+        <div class="results-meta">
+          <span id="resultsCount">Showing 50 of 4,631</span>
+          <span id="resultsFilterTag">All Branches</span>
+        </div>
+
+        <div class="person-list" id="personList">
+          <!-- Person Cards rendered dynamically -->
+        </div>
+
+        <div style="text-align:center; padding: 20px 0;">
+          <button id="loadMoreBtn" class="chip" onclick="loadMoreResults()" style="display:none; margin:0 auto;">Load More Ancestors</button>
+        </div>
+      </section>
+
+      <!-- ================= VIEW 2: INTERACTIVE TREE ================= -->
+      <section id="view-tree" class="view-section">
+        <div class="tree-controls">
+          <button class="tree-root-btn active" id="btnRootJerome" onclick="setTreeRoot('jerome')">Jerome Eno Line</button>
+          <button class="tree-root-btn" id="btnRootAmy" onclick="setTreeRoot('amy')">Amy Whisenhunt Line</button>
+        </div>
+
+        <div class="tree-canvas-wrap" id="treeCanvas">
+          <!-- Tree hierarchy rendered dynamically -->
+        </div>
+      </section>
+
+      <!-- ================= VIEW 3: WAR STORIES ================= -->
+      <section id="view-stories" class="view-section">
+        <div style="margin-bottom: 16px;">
+          <h2 style="font-size: 1.3rem; font-weight:800; color:#fff;">Ancestral Battlefield Chronicles</h2>
+          <p style="font-size: 0.85rem; color: var(--text-secondary); margin-top:4px;">
+            Documented wartime exploits, ambushes, sieges, and frontier battles directly involving your relatives.
+          </p>
+        </div>
+        <div class="story-grid" id="storyGrid">
+          <!-- War Stories rendered dynamically -->
+        </div>
+      </section>
+
+      <!-- ================= VIEW 4: IMMIGRATION ================= -->
+      <section id="view-timeline" class="view-section">
+        <div style="margin-bottom: 16px;">
+          <h2 style="font-size: 1.3rem; font-weight:800; color:#fff;">The Immigrant Journeys</h2>
+          <p style="font-size: 0.85rem; color: var(--text-secondary); margin-top:4px;">
+            How each branch arrived in Massachusetts: the 19th-century Quebec mill exodus and your mom's 1963 Acadian arrival.
+          </p>
+        </div>
+        <div class="timeline-wrap" id="timelineList">
+          <!-- Timeline rendered dynamically -->
+        </div>
+      </section>
+
+    </main>
+
+    <!-- ================= BOTTOM NAVIGATION ================= -->
+    <nav class="bottom-nav">
+      <button class="nav-tab active" onclick="switchTab('search', this)">
+        <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+        <span>Search</span>
+      </button>
+      <button class="nav-tab" onclick="switchTab('tree', this)">
+        <svg viewBox="0 0 24 24"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>
+        <span>Tree</span>
+      </button>
+      <button class="nav-tab" onclick="switchTab('stories', this)">
+        <svg viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path></svg>
+        <span>War Stories</span>
+      </button>
+      <button class="nav-tab" onclick="switchTab('timeline', this)">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 14 14"></polyline></svg>
+        <span>Immigration</span>
+      </button>
+    </nav>
+  </div>
+
+  <!-- ================= ANCESTOR DETAIL MODAL / DRAWER ================= -->
+  <div class="modal-backdrop" id="personModal" onclick="closeModalOnBackdrop(event)">
+    <div class="modal-sheet" id="modalSheet">
+      <div class="modal-handle"></div>
+      
+      <div class="modal-header">
+        <div>
+          <span class="badge-side" id="modalSideBadge">Jerome's Line</span>
+          <h2 class="modal-name" id="modalName">Name</h2>
+          <div style="font-size:0.8rem; color:var(--text-muted); margin-top:2px;" id="modalId">ID: ABCD-123</div>
+        </div>
+        <button class="modal-close-btn" onclick="closeModal()">✕</button>
+      </div>
+
+      <div id="modalTags" style="display:flex; flex-wrap:wrap; gap:6px;"></div>
+
+      <div>
+        <div class="modal-section-title">Vital Events</div>
+        <div class="vital-grid">
+          <div class="vital-box">
+            <div class="vital-label">Birth</div>
+            <div class="vital-val" id="modalBirth">—</div>
+          </div>
+          <div class="vital-box">
+            <div class="vital-label">Death</div>
+            <div class="vital-val" id="modalDeath">—</div>
+          </div>
+          <div class="vital-box" style="grid-column: 1 / -1;">
+            <div class="vital-label">Burial / Resting Place</div>
+            <div class="vital-val" id="modalBurial">—</div>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="modal-section-title">Family Relationships</div>
+        
+        <div style="margin-bottom: 10px;">
+          <div style="font-size:0.75rem; color:var(--text-secondary); margin-bottom:4px;">Parents</div>
+          <div class="rel-list" id="modalParents"></div>
+        </div>
+
+        <div style="margin-bottom: 10px;">
+          <div style="font-size:0.75rem; color:var(--text-secondary); margin-bottom:4px;">Spouses</div>
+          <div class="rel-list" id="modalSpouses"></div>
+        </div>
+
+        <div>
+          <div style="font-size:0.75rem; color:var(--text-secondary); margin-bottom:4px;">Children</div>
+          <div class="rel-list" id="modalChildren"></div>
+        </div>
+      </div>
+
+      <div style="margin-top: 10px; display:flex; flex-direction:column; gap:8px;">
+        <a id="modalFsLink" href="#" target="_blank" class="btn-primary">
+          <span>View on FamilySearch ↗</span>
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <script src="data.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
