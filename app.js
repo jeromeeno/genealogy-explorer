@@ -114,6 +114,11 @@ function switchTab(tabId, el) {
   if (targetSection) targetSection.classList.add('active');
   if (el) el.classList.add('active');
   
+  if (tabId === 'map' && googleMapInstance) {
+    google.maps.event.trigger(googleMapInstance, 'resize');
+    if (mapInitialBounds) googleMapInstance.fitBounds(mapInitialBounds);
+  }
+
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
@@ -507,3 +512,280 @@ function escapeHtml(str) {
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#039;');
 }
+
+// ================= GOOGLE MAPS PLATFORM =================
+let googleMapInstance = null;
+let mapMarkers = [];
+let mapInitialBounds = null;
+
+const MAP_LOCATIONS = [
+  {
+    id: 'lowell',
+    title: 'Lowell, Massachusetts',
+    category: 'immigration',
+    coords: { lat: 42.6425, lng: -71.3162 },
+    desc: 'The historic Franco-American industrial heartland. Destination for William & Pierre Eno (~1888), Alexis & Albina Lamarre (~1886), Joseph Henri L\'Heureux (1875), and Napoleon Phaneuf (~1872).',
+    people: ['GHYM-322', '9NF5-87T', 'LB2Q-2LK', '9NF5-871', 'GLRP-DPJ', 'K266-GQ5', 'K2TL-BCX', '9VNH-9FG']
+  },
+  {
+    id: 'fallriver',
+    title: 'Fall River, Massachusetts',
+    category: 'cemetery',
+    coords: { lat: 41.7015, lng: -71.1550 },
+    desc: 'Textile mill community in Ward 2 and site of Notre Dame Cemetery, where 3rd great-grandparents Augustin Normand (1896) and Emélie Hudon (1907) are interred. Joseph Michaud died here in 1921.',
+    people: ['LYGW-92H', 'LYGW-92X', '99H8-3PS', 'LZKF-68P', 'L7D1-LT4', 'L5PJ-F8K']
+  },
+  {
+    id: 'groton',
+    title: 'Groton, Massachusetts',
+    category: 'battle',
+    coords: { lat: 42.6112, lng: -71.5745 },
+    desc: 'Scene of the Queen Anne\'s War raid on August 8, 1704. 14-year-old Matthias Farnsworth was captured in the fields and marched 300 miles to Montreal, founding the Phaneuf dynasty.',
+    people: ['LKK6-RYV']
+  },
+  {
+    id: 'saint-valentin',
+    title: 'Saint-Valentin, Quebec',
+    category: 'immigration',
+    coords: { lat: 45.1833, lng: -73.3167 },
+    desc: 'Rural Richelieu River farming parish. Birthplace of Pierre Eno (1882) and home of William Eno. Site of the tragic 1884 death of Josephine Poirier that prompted the family\'s move to Lowell.',
+    people: ['LB2Q-2LK', '9NF5-87T', 'GV5P-3RH', 'LDHZ-S4B']
+  },
+  {
+    id: 'berthier',
+    title: 'Berthierville & Sorel, Quebec',
+    category: 'battle',
+    coords: { lat: 46.0667, lng: -73.1833 },
+    desc: 'Original frontier land concession granted to Carignan-Salières soldier Jacques Énaud dit Canada in 1665 to guard against Iroquois war parties on the Richelieu River.',
+    people: ['GM4N-59X', 'LTC5-FPN', 'GFD9-BK2', 'G7PZ-WRB', 'LCXY-QZ1']
+  },
+  {
+    id: 'riviere-ouelle',
+    title: 'Rivière-Ouelle, Quebec',
+    category: 'battle',
+    coords: { lat: 47.4333, lng: -70.0167 },
+    desc: 'Site of the October 1690 shoreline ambush during King William\'s War. Jean Pelletier and Guillaume Lizotte were among the 39 settlers who repelled Sir William Phips\' English armada.',
+    people: ['LZ8C-GTL', 'LYF3-4HN']
+  },
+  {
+    id: 'castine',
+    title: 'Pentagouet (Castine), Maine',
+    category: 'battle',
+    coords: { lat: 44.3881, lng: -68.7997 },
+    desc: 'Wilderness post founded by Jean-Vincent d\'Abbadie, 3e Baron de Saint-Castin, who married Pidianské, daughter of Grand Sagamore Madockawando.',
+    people: ['9KDS-BKX', 'L4SP-V3B']
+  },
+  {
+    id: 'pemaquid',
+    title: 'Fort William Henry (Pemaquid), Maine',
+    category: 'battle',
+    coords: { lat: 43.8797, lng: -69.5250 },
+    desc: 'English stone fortress besieged and destroyed in 1696 by Baron de Saint-Castin and Pierre Le Moyne d\'Iberville with Abenaki war parties in canoes.',
+    people: ['9KDS-BKX']
+  },
+  {
+    id: 'cap-rouge',
+    title: 'Cap-Rouge, Quebec',
+    category: 'battle',
+    coords: { lat: 46.7500, lng: -71.3500 },
+    desc: 'Site of the June 10, 1653 Iroquois ambush where Pierre LePicard-Gareman was martyred while defending his 10-year-old son Charles.',
+    people: ['LRCC-3XL']
+  },
+  {
+    id: 'saint-ignace',
+    title: 'Saint-Ignace, Kent Co., New Brunswick',
+    category: 'immigration',
+    coords: { lat: 46.7167, lng: -64.9667 },
+    desc: 'The 300-year Acadian homeland of the Caissie and Gallant families, who stayed in the Maritimes until Diane Caissie and Eugene immigrated to Massachusetts in 1963.',
+    people: ['PW92-7TK', 'G3ZY-8HH', 'PW92-ZRG', 'P9GJ-VQK', 'GDQD-SQH']
+  },
+  {
+    id: 'swearingen-fort',
+    title: 'Swearingen\'s Fort (Fayette County, PA)',
+    category: 'battle',
+    coords: { lat: 39.7820, lng: -79.8320 },
+    desc: 'Pioneer stockade in Springhill Township built on a 468-acre tract, home to Captain Van Swearingen ("Indian Van") on the Ohio Valley frontier.',
+    people: ['LB67-R2J']
+  },
+  {
+    id: 'yorktown',
+    title: 'Yorktown, Virginia',
+    category: 'battle',
+    coords: { lat: 37.2388, lng: -76.5097 },
+    desc: 'October 1781 Siege of Yorktown. Captain Antoine Paulin served with Hazen\'s 2nd Canadian Regiment under George Washington when General Cornwallis surrendered.',
+    people: ['L4WD-WP8']
+  },
+  {
+    id: 'saratoga',
+    title: 'Saratoga Battlefield, New York',
+    category: 'battle',
+    coords: { lat: 43.0324, lng: -73.5878 },
+    desc: '1777 Saratoga Campaign. Captain Van Swearingen fought under Daniel Morgan\'s elite rifle corps before being captured and questioned by General Fraser.',
+    people: ['LB67-R2J']
+  }
+];
+
+function initGoogleMap() {
+  const mapElement = document.getElementById('googleMap');
+  if (!mapElement) return;
+
+  const darkStyles = [
+    { elementType: "geometry", stylers: [{ color: "#171f2d" }] },
+    { elementType: "labels.text.stroke", stylers: [{ color: "#131b26" }] },
+    { elementType: "labels.text.fill", stylers: [{ color: "#94a3b8" }] },
+    { featureType: "administrative.locality", elementType: "labels.text.fill", stylers: [{ color: "#f8fafc" }] },
+    { featureType: "poi", elementType: "labels.text.fill", stylers: [{ color: "#64748b" }] },
+    { featureType: "road", elementType: "geometry", stylers: [{ color: "#223147" }] },
+    { featureType: "road", elementType: "geometry.stroke", stylers: [{ color: "#172334" }] },
+    { featureType: "water", elementType: "geometry", stylers: [{ color: "#0b111c" }] },
+    { featureType: "water", elementType: "labels.text.fill", stylers: [{ color: "#38bdf8" }] }
+  ];
+
+  googleMapInstance = new google.maps.Map(mapElement, {
+    center: { lat: 43.8, lng: -72.0 },
+    zoom: 6,
+    styles: darkStyles,
+    mapTypeControl: false,
+    streetViewControl: false,
+    fullscreenControl: true,
+    zoomControl: true
+  });
+
+  mapInitialBounds = new google.maps.LatLngBounds();
+
+  // Pin Icons
+  const icons = {
+    battle: {
+      path: "M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z",
+      fillColor: "#f59e0b",
+      fillOpacity: 1,
+      strokeColor: "#ffffff",
+      strokeWeight: 1.5,
+      scale: 1.4,
+      anchor: new google.maps.Point(12, 22)
+    },
+    immigration: {
+      path: "M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z",
+      fillColor: "#10b981",
+      fillOpacity: 1,
+      strokeColor: "#ffffff",
+      strokeWeight: 1.5,
+      scale: 1.4,
+      anchor: new google.maps.Point(12, 22)
+    },
+    cemetery: {
+      path: "M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z",
+      fillColor: "#8b5cf6",
+      fillOpacity: 1,
+      strokeColor: "#ffffff",
+      strokeWeight: 1.5,
+      scale: 1.4,
+      anchor: new google.maps.Point(12, 22)
+    }
+  };
+
+  // Add Markers
+  MAP_LOCATIONS.forEach(loc => {
+    const latLng = new google.maps.LatLng(loc.coords.lat, loc.coords.lng);
+    mapInitialBounds.extend(latLng);
+
+    const marker = new google.maps.Marker({
+      position: latLng,
+      map: googleMapInstance,
+      title: loc.title,
+      icon: icons[loc.category] || icons.immigration
+    });
+
+    marker.addListener('click', () => {
+      showMapLocationCard(loc);
+    });
+
+    mapMarkers.push({ marker, category: loc.category });
+  });
+
+  // Add Historical Migration Polylines
+  // 1. 1704 Groton to Montreal Captive March Route
+  new google.maps.Polyline({
+    path: [
+      { lat: 42.6112, lng: -71.5745 }, // Groton
+      { lat: 43.6, lng: -72.3 },       // Connecticut River Valley
+      { lat: 44.5, lng: -72.5 },       // Lake Champlain Route
+      { lat: 45.54, lng: -73.65 }      // Montreal / Sault-au-Récollet
+    ],
+    geodesic: true,
+    strokeColor: '#f59e0b',
+    strokeOpacity: 0.7,
+    strokeWeight: 2,
+    map: googleMapInstance
+  });
+
+  // 2. ~1888 Eno Richelieu Railway Route to Lowell
+  new google.maps.Polyline({
+    path: [
+      { lat: 45.1833, lng: -73.3167 }, // Saint-Valentin
+      { lat: 44.4759, lng: -73.2121 }, // Burlington
+      { lat: 42.6425, lng: -71.3162 }  // Lowell
+    ],
+    geodesic: true,
+    strokeColor: '#38bdf8',
+    strokeOpacity: 0.8,
+    strokeWeight: 3,
+    map: googleMapInstance
+  });
+
+  // 3. 1963 Acadian Migration to Massachusetts
+  new google.maps.Polyline({
+    path: [
+      { lat: 46.7167, lng: -64.9667 }, // Saint-Ignace, NB
+      { lat: 45.3, lng: -66.0 },       // Saint John
+      { lat: 43.66, lng: -70.25 },     // Portland, ME
+      { lat: 42.6425, lng: -71.3162 }  // Massachusetts
+    ],
+    geodesic: true,
+    strokeColor: '#10b981',
+    strokeOpacity: 0.8,
+    strokeWeight: 2.5,
+    map: googleMapInstance
+  });
+
+  googleMapInstance.fitBounds(mapInitialBounds);
+}
+
+function showMapLocationCard(loc) {
+  const card = document.getElementById('mapLocationCard');
+  const catEl = document.getElementById('mapCardCategory');
+  const titleEl = document.getElementById('mapCardTitle');
+  const descEl = document.getElementById('mapCardDesc');
+  const ancEl = document.getElementById('mapCardAncestors');
+
+  catEl.textContent = loc.category.toUpperCase();
+  titleEl.textContent = loc.title;
+  descEl.textContent = loc.desc;
+
+  ancEl.innerHTML = (loc.people || []).map(pid => {
+    const p = people[pid];
+    const pName = p ? p.n : pid;
+    return `<button class="ancestor-link-btn" onclick="openPersonModal('${pid}')">👤 ${escapeHtml(pName)}</button>`;
+  }).join('');
+
+  card.style.display = 'block';
+  card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function closeMapCard() {
+  document.getElementById('mapLocationCard').style.display = 'none';
+}
+
+function setMapFilter(cat, el) {
+  document.querySelectorAll('#view-map .chip').forEach(c => c.classList.remove('active'));
+  if (el) el.classList.add('active');
+
+  mapMarkers.forEach(m => {
+    if (cat === 'all' || m.category === cat) {
+      m.marker.setMap(googleMapInstance);
+    } else {
+      m.marker.setMap(null);
+    }
+  });
+}
+
