@@ -915,3 +915,202 @@ body {
   margin-top: 12px;
 }
 
+/* ---------------- Era Navigation Bar ---------------- */
+.era-filter-bar {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 2px 2px 8px 2px;
+  margin-bottom: 12px;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.era-filter-bar::-webkit-scrollbar {
+  display: none;
+}
+
+.era-chip {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+  text-align: left;
+}
+
+.era-chip:active {
+  transform: scale(0.97);
+}
+
+.era-chip.active {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.15), rgba(245, 158, 11, 0.05));
+  border-color: var(--accent-gold);
+  box-shadow: 0 0 16px rgba(245, 158, 11, 0.2);
+}
+
+.era-chip.active .era-text span {
+  color: #fff;
+}
+
+.era-chip.active .era-text small {
+  color: var(--accent-gold-light);
+}
+
+.era-icon {
+  font-size: 1.35rem;
+}
+
+.era-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.era-text span {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #cbd5e1;
+  line-height: 1.2;
+}
+
+.era-text small {
+  font-size: 0.68rem;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.era-counter-badge {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--accent-gold);
+  background: var(--accent-gold-bg);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+}
+
+.era-timeline-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.era-timeline-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 14px 16px;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.era-timeline-card:hover {
+  border-color: var(--accent-gold);
+  background: var(--bg-card-hover);
+  transform: translateY(-1px);
+}
+
+.era-timeline-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.era-timeline-card-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #fff;
+}
+
+.era-timeline-card-desc {
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  line-height: 1.45;
+  margin-bottom: 8px;
+}
+
+/* ---------------- Person Drawer Mini-Map ---------------- */
+.modal-geo-section {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  padding: 14px;
+  margin-top: 4px;
+}
+
+.geo-badge-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.geo-pin-icon {
+  font-size: 1.1rem;
+}
+
+.geo-location-name {
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--accent-gold);
+}
+
+.person-mini-map-frame {
+  width: 100%;
+  height: 160px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-color);
+  background: #111827;
+  overflow: hidden;
+  margin-bottom: 10px;
+}
+
+.btn-geo-action {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 10px 14px;
+  background: rgba(245, 158, 11, 0.1);
+  border: 1px solid var(--accent-gold);
+  border-radius: var(--radius-sm);
+  color: var(--accent-gold-light);
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-geo-action:hover, .btn-geo-action:active {
+  background: var(--accent-gold);
+  color: #0b0f17;
+}
+
+/* ---------------- Tree Node Geo Pill ---------------- */
+.tree-geo-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.68rem;
+  color: var(--accent-gold-light);
+  background: rgba(245, 158, 11, 0.12);
+  border: 1px solid rgba(245, 158, 11, 0.25);
+  padding: 2px 6px;
+  border-radius: 4px;
+  margin-top: 4px;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+

@@ -278,15 +278,31 @@ function createPersonCardHtml(p) {
 }
 
 // ================= INTERACTIVE TREE VIEW =================
-function setTreeRoot(side) {
-  document.getElementById('btnRootJerome').classList.toggle('active', side === 'jerome');
-  document.getElementById('btnRootAmy').classList.toggle('active', side === 'amy');
-  currentTreeRootId = side === 'jerome' ? (data.roots?.jerome || 'PW92-F2S') : (data.roots?.amy || 'PW92-6SQ');
+function setTreeRoot(mode) {
+  document.querySelectorAll('.tree-root-btn').forEach(btn => btn.classList.remove('active'));
+  
+  if (mode === 'jerome') {
+    document.getElementById('btnRootJerome')?.classList.add('active');
+    currentTreeRootId = 'PW92-F2S';
+  } else if (mode === 'amy') {
+    document.getElementById('btnRootAmy')?.classList.add('active');
+    currentTreeRootId = 'PW92-6SQ';
+  } else if (mode === 'founders') {
+    document.getElementById('btnRootFounders')?.classList.add('active');
+    currentTreeRootId = 'founders';
+  }
+  
   renderTree();
 }
 
 function renderTree() {
   const container = document.getElementById('treeCanvas');
+  
+  if (currentTreeRootId === 'founders') {
+    renderFoundersTree(container);
+    return;
+  }
+
   const rootPerson = people[currentTreeRootId];
   if (!rootPerson) {
     container.innerHTML = '<p style="color:var(--text-muted);">Root person not found.</p>';
@@ -296,6 +312,56 @@ function renderTree() {
   // Render 4 levels of ancestors starting from root
   let html = `<div style="display:flex; flex-direction:column; gap:20px;">`;
   html += renderTreeNodeLevel([currentTreeRootId], 0);
+  html += `</div>`;
+  container.innerHTML = html;
+}
+
+function renderFoundersTree(container) {
+  const founderCards = [
+    { id: 'GM4N-59X', role: 'Progenitor of Eno Family (Carignan-Salières, 1665)', ship: 'Le Paix (1665)', origin: 'Lisieux, Normandy ➔ Berthier/Sorel' },
+    { id: 'MBYF-JY1', role: 'Fille du Roi (King\'s Dowry 1668, Wife of Jacques)', ship: 'La Nouvelle-France (1668)', origin: 'Paris, Île-de-France ➔ Montreal' },
+    { id: '9XRB-RLG', role: 'Founding Acadian Patriarch of Caissie Family', ship: 'La Rochelle Expedition (1665)', origin: 'France ➔ Port-Royal, Acadia' },
+    { id: 'KNHM-2WS', role: 'Pioneer of Acadia (Razilly Expedition 1632)', ship: 'L\'Espérance-en-Dieu (1632)', origin: 'Martaizé, Poitou ➔ Port-Royal' },
+    { id: 'LBNL-4LN', role: 'Percheron Pioneer & Master Carpenter', ship: 'Giffard Fleet (1634)', origin: 'Mortagne-au-Perche ➔ Quebec' },
+    { id: 'LRCC-3XL', role: 'Frontier Defender & Martyr (Cap-Rouge 1653)', ship: 'Arrived ~1638', origin: 'Bagneux, France ➔ Cap-Rouge' },
+    { id: 'LZ8C-GTL', role: 'Hero of Rivière-Ouelle Shoreline Ambush (1690)', ship: 'Arrived 1641', origin: 'Tourouvre, Perche ➔ Rivière-Ouelle' },
+    { id: 'LYF3-4HN', role: 'Defender of Rivière-Ouelle against Phips (1690)', ship: 'Arrived 1665', origin: 'Lizotte, Normandy ➔ Rivière-Ouelle' },
+    { id: '9KDS-BKX', role: '3e Baron de Saint-Castin & Penobscot War Chief', ship: 'Carignan-Salières (1665)', origin: 'Béarn, France ➔ Castine, Maine' },
+    { id: 'PWHF-6JL', role: 'Breton Ancestor (Hénault Branch)', ship: 'Breton Line (~1600)', origin: 'Vannes, Brittany, France' }
+  ];
+
+  let html = `
+    <div style="margin-bottom:16px;">
+      <h3 style="font-size:1.15rem; font-weight:800; color:#fff;">⚜️ 17th-Century French & Acadian Founders</h3>
+      <p style="font-size:0.85rem; color:var(--text-secondary); margin-top:4px; line-height:1.5;">
+        The direct ancestors who braved the transatlantic crossing in the 1600s aboard wooden sailing vessels to establish New France and Acadia. Tap any card to view their biography and ancestral mini-map.
+      </p>
+    </div>
+    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap:12px;">
+  `;
+
+  founderCards.forEach(f => {
+    const p = people[f.id];
+    if (!p) return;
+    html += `
+      <div class="tree-node-card" onclick="openPersonModal('${p.id}')">
+        <div style="font-size:0.68rem; color:var(--accent-gold); font-weight:700; text-transform:uppercase; margin-bottom:2px; letter-spacing:0.04em;">
+          ${escapeHtml(f.role)}
+        </div>
+        <div style="font-weight:700; color:#fff; font-size:0.95rem;">${escapeHtml(p.n)}</div>
+        <div style="font-size:0.75rem; color:var(--text-secondary); margin-top:2px;">
+          ${escapeHtml(p.b || '—')} – ${escapeHtml(p.d || '—')}
+        </div>
+        <div class="tree-geo-pill" style="margin-top:6px;">
+          ⛵ ${escapeHtml(f.origin)}
+        </div>
+        <div style="font-size:0.7rem; color:var(--text-muted); margin-top:4px;">
+          Ship: ${escapeHtml(f.ship)} • ID: ${p.id}
+        </div>
+      </div>
+    `;
+  });
+
   html += `</div>`;
   container.innerHTML = html;
 }
@@ -326,7 +392,8 @@ function renderTreeNodeLevel(personIds, level) {
           <div style="font-size:0.75rem; color:var(--text-secondary); margin-top:2px;">
             ${escapeHtml(p.b ? p.b.slice(0, 10) : '—')} – ${escapeHtml(p.d ? p.d.slice(0, 10) : 'Living')}
           </div>
-          <div style="font-size:0.7rem; color:var(--text-muted); margin-top:2px;">
+          ${p.geo ? `<div class="tree-geo-pill">📍 ${escapeHtml(p.geo.name)}</div>` : ''}
+          <div style="font-size:0.7rem; color:var(--text-muted); margin-top:4px;">
             ID: ${p.id}
           </div>
         </div>
@@ -371,6 +438,13 @@ function renderWarStories() {
             ${peopleButtons}
           </div>
         </div>
+        ${s.geo ? `
+          <div style="margin-top:10px;">
+            <button class="btn-geo-action" onclick="focusOnMapLocation(${s.geo.lat}, ${s.geo.lng}, '${escapeHtml(s.title)}')">
+              🗺️ Locate on Historical Map
+            </button>
+          </div>
+        ` : ''}
       </div>
     `;
   }).join('');
@@ -388,16 +462,30 @@ function renderImmigrationTimeline() {
       return `<button class="ancestor-link-btn" onclick="openPersonModal('${pid}')">👤 ${escapeHtml(pName)}</button>`;
     }).join('');
 
+    const eraLabel = item.era === '17th' ? '17e Siècle (1600s)' :
+                     item.era === '18th' ? '18e Siècle (1700s)' :
+                     item.era === '19th' ? '19e Siècle (1800s)' : '20e Siècle (1900s+)';
+
     return `
       <div class="timeline-item">
         <div class="timeline-dot"></div>
         <div class="timeline-year">${escapeHtml(item.year)}</div>
         <div class="timeline-card">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+            <span class="story-conflict" style="font-size:0.68rem;">${eraLabel}</span>
+          </div>
           <div class="timeline-title">${escapeHtml(item.family)} ➔ ${escapeHtml(item.dest)}</div>
           <div class="timeline-desc">${escapeHtml(item.desc)}</div>
-          <div class="story-ancestors">
+          <div class="story-ancestors" style="margin-top:6px;">
             ${peopleButtons}
           </div>
+          ${item.geo ? `
+            <div style="margin-top:10px;">
+              <button class="btn-geo-action" onclick="focusOnMapLocation(${item.geo.lat}, ${item.geo.lng}, '${escapeHtml(item.family)}')">
+                🗺️ Trace Migration on Map
+              </button>
+            </div>
+          ` : ''}
         </div>
       </div>
     `;
@@ -439,8 +527,20 @@ function openPersonModal(pid) {
 
   // Vitals
   birthEl.innerHTML = `<div>${escapeHtml(p.b || '—')}</div><div style="font-size:0.75rem; color:var(--text-muted);">${escapeHtml(p.bp || '')}</div>`;
-  deathEl.innerHTML = `<div>${escapeHtml(p.d || '—')}</div><div style="font-size:0.75rem; color:var(--text-muted);">${escapeHtml(p.dp || '')}</div>`;
-  burialEl.textContent = p.bu || 'Not recorded';
+  // Ancestral Geography & Mini-Map Card
+  const geoSection = document.getElementById('modalGeoSection');
+  const geoLocationEl = document.getElementById('modalGeoLocation');
+  if (p.geo && p.geo.lat && p.geo.lng) {
+    currentModalGeo = p.geo;
+    if (geoLocationEl) geoLocationEl.textContent = p.geo.name;
+    if (geoSection) geoSection.style.display = 'block';
+    setTimeout(() => {
+      renderPersonMiniMap(p.geo.lat, p.geo.lng, p.n);
+    }, 180);
+  } else {
+    currentModalGeo = null;
+    if (geoSection) geoSection.style.display = 'none';
+  }
 
   // Parents
   if (p.p && p.p.length > 0) {
@@ -502,6 +602,71 @@ function closeModalOnBackdrop(e) {
   }
 }
 
+// Mini-Map in Person Drawer
+let personMiniMapInstance = null;
+let personMiniMarker = null;
+let currentModalGeo = null;
+
+function renderPersonMiniMap(lat, lng, name) {
+  const container = document.getElementById('personMiniMap');
+  if (!container || !window.google || !google.maps) return;
+
+  const latLng = { lat, lng };
+
+  if (!personMiniMapInstance) {
+    const darkStyles = [
+      { elementType: "geometry", stylers: [{ color: "#171f2d" }] },
+      { elementType: "labels.text.stroke", stylers: [{ color: "#131b26" }] },
+      { elementType: "labels.text.fill", stylers: [{ color: "#94a3b8" }] },
+      { featureType: "administrative.locality", elementType: "labels.text.fill", stylers: [{ color: "#f8fafc" }] },
+      { featureType: "road", elementType: "geometry", stylers: [{ color: "#223147" }] },
+      { featureType: "water", elementType: "geometry", stylers: [{ color: "#0b111c" }] }
+    ];
+
+    personMiniMapInstance = new google.maps.Map(container, {
+      center: latLng,
+      zoom: 7,
+      styles: darkStyles,
+      disableDefaultUI: true,
+      zoomControl: true,
+      gestureHandling: 'cooperative'
+    });
+
+    personMiniMarker = new google.maps.Marker({
+      position: latLng,
+      map: personMiniMapInstance,
+      title: name,
+      icon: {
+        path: "M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z",
+        fillColor: "#f59e0b",
+        fillOpacity: 1,
+        strokeColor: "#ffffff",
+        strokeWeight: 1.5,
+        scale: 1.3,
+        anchor: new google.maps.Point(12, 22)
+      }
+    });
+  } else {
+    google.maps.event.trigger(personMiniMapInstance, 'resize');
+    personMiniMapInstance.setCenter(latLng);
+    personMiniMapInstance.setZoom(7);
+    if (personMiniMarker) {
+      personMiniMarker.setPosition(latLng);
+      personMiniMarker.setTitle(name);
+    }
+  }
+}
+
+function openPersonOnMainMap() {
+  if (!currentModalGeo) return;
+  const targetGeo = currentModalGeo;
+  closeModal();
+  switchTab('map');
+  setTimeout(() => {
+    focusOnMapLocation(targetGeo.lat, targetGeo.lng, targetGeo.name, 9);
+  }, 250);
+}
+
 // Helper escape HTML
 function escapeHtml(str) {
   if (!str) return '';
@@ -516,13 +681,213 @@ function escapeHtml(str) {
 // ================= GOOGLE MAPS PLATFORM =================
 let googleMapInstance = null;
 let mapMarkers = [];
+let mapPolylines = [];
 let mapInitialBounds = null;
+let currentMapEra = 'all';
+let currentMapCategory = 'all';
 
 const MAP_LOCATIONS = [
+  // --- 17th Century (1600s): French Departure Ports & Provinces ---
+  {
+    id: 'lisieux',
+    title: 'Lisieux, Normandy, France',
+    category: 'immigration',
+    era: '17th',
+    coords: { lat: 49.1458, lng: 0.2278 },
+    desc: 'Cradle of the Eno family line. Norman birthplace of Carignan-Salières soldier Jacques Énaud dit Canada (~1636), who sailed aboard Le Paix in 1665 to defend New France.',
+    people: ['GM4N-59X']
+  },
+  {
+    id: 'paris',
+    title: 'Paris, Île-de-France, France',
+    category: 'immigration',
+    era: '17th',
+    coords: { lat: 48.8566, lng: 2.3522 },
+    desc: 'Origin of Fille du Roi Marie Leroux (~1647), who crossed the Atlantic in 1668 with King Louis XIV\'s royal dowry and married Jacques Énaud in Montreal.',
+    people: ['MBYF-JY1']
+  },
+  {
+    id: 'la-rochelle',
+    title: 'La Rochelle, Aunis, France',
+    category: 'immigration',
+    era: '17th',
+    coords: { lat: 46.1603, lng: -1.1511 },
+    desc: 'The historic Atlantic embarkation port for 17th-century French pioneers sailing for Acadia and Quebec, including Acadian patriarch Roger Jean Caissy (1665).',
+    people: ['9XRB-RLG', 'KNHM-2WS']
+  },
+  {
+    id: 'perche',
+    title: 'Mortagne-au-Perche & Tourouvre, France',
+    category: 'immigration',
+    era: '17th',
+    coords: { lat: 48.5206, lng: 0.5456 },
+    desc: 'The Percheron pioneer cradle. Home of master carpenter Zacharie Cloutier, who sailed in 1634 with Robert Giffard\'s expedition to found Quebec, and Jean Pelletier.',
+    people: ['LBNL-4LN', 'LZ8C-GTL']
+  },
+  {
+    id: 'poitou',
+    title: 'Martaizé & Poitou, France',
+    category: 'immigration',
+    era: '17th',
+    coords: { lat: 46.9172, lng: 0.0617 },
+    desc: 'The ancestral homeland of early Acadian settlers. Origin of Pierre Comeau I, who sailed in 1632 aboard L\'Espérance-en-Dieu with Commander Isaac de Razilly.',
+    people: ['KNHM-2WS']
+  },
+  {
+    id: 'vannes',
+    title: 'Vannes & Brittany, France',
+    category: 'immigration',
+    era: '17th',
+    coords: { lat: 47.6582, lng: -2.7608 },
+    desc: 'Breton origin of Yves Hénault, born ~1600 on the coast of the Gulf of Morbihan, Brittany.',
+    people: ['PWHF-6JL']
+  },
+  {
+    id: 'dieppe',
+    title: 'Dieppe, Normandy, France',
+    category: 'immigration',
+    era: '17th',
+    coords: { lat: 49.9246, lng: 1.0775 },
+    desc: 'Channel port where 17th-century ships Le Paix, Saint-Sébastien, and the royal expeditionary fleets took on provisions for the Atlantic crossing to Quebec.',
+    people: ['GM4N-59X']
+  },
+
+  // --- 17th Century (1600s): Early New France & Acadia Settlements ---
+  {
+    id: 'port-royal',
+    title: 'Port-Royal, Acadia',
+    category: 'immigration',
+    era: '17th',
+    coords: { lat: 44.7431, lng: -65.5172 },
+    desc: 'The first permanent French settlement in North America (1605/1632). Acadian home of Roger Jean Caissy (1665) and Pierre Comeau (1632), ancestors to over 300 years of Maritimes family history.',
+    people: ['9XRB-RLG', 'KNHM-2WS']
+  },
+  {
+    id: 'quebec-city',
+    title: 'Quebec City & Côte de Beaupré',
+    category: 'immigration',
+    era: '17th',
+    coords: { lat: 46.8139, lng: -71.2082 },
+    desc: 'The capital of New France. Disembarkation point for Jacques Énaud (1665 aboard Le Paix), Marie Leroux (1668), and master carpenter Zacharie Cloutier (1634).',
+    people: ['GM4N-59X', 'MBYF-JY1', 'LBNL-4LN']
+  },
+  {
+    id: 'cap-rouge',
+    title: 'Cap-Rouge, Quebec',
+    category: 'battle',
+    era: '17th',
+    coords: { lat: 46.7500, lng: -71.3500 },
+    desc: 'Site of the June 10, 1653 Iroquois ambush and martyrdom of Pierre LePicard-Gareman while defending his 10-year-old son Charles on the St. Lawrence frontier.',
+    people: ['LRCC-3XL']
+  },
+  {
+    id: 'berthier',
+    title: 'Berthierville & Sorel, Quebec',
+    category: 'battle',
+    era: '17th',
+    coords: { lat: 46.0667, lng: -73.1833 },
+    desc: 'Frontier land grant conceded in 1665 to Carignan-Salières veteran Jacques Énaud dit Canada to guard the strategic mouth of the Richelieu River against Iroquois war parties.',
+    people: ['GM4N-59X', 'LTC5-FPN', 'GFD9-BK2', 'G7PZ-WRB', 'LCXY-QZ1']
+  },
+  {
+    id: 'riviere-ouelle',
+    title: 'Rivière-Ouelle, Quebec',
+    category: 'battle',
+    era: '17th',
+    coords: { lat: 47.4333, lng: -70.0167 },
+    desc: 'Site of the October 1690 shoreline ambush during King William\'s War. 39 armed settlers, including ancestors Jean Pelletier and Guillaume Lizotte, repelled Sir William Phips\' English armada.',
+    people: ['LZ8C-GTL', 'LYF3-4HN']
+  },
+  {
+    id: 'castine',
+    title: 'Pentagouet (Castine), Maine',
+    category: 'battle',
+    era: '17th',
+    coords: { lat: 44.3881, lng: -68.7997 },
+    desc: 'Frontier post founded by Jean-Vincent d\'Abbadie, 3e Baron de Saint-Castin, who married Pidianské, daughter of Grand Sagamore Madockawando, uniting French and Abenaki bloodlines.',
+    people: ['9KDS-BKX', 'L4SP-V3B']
+  },
+  {
+    id: 'pemaquid',
+    title: 'Fort William Henry (Pemaquid), Maine',
+    category: 'battle',
+    era: '17th',
+    coords: { lat: 43.8797, lng: -69.5250 },
+    desc: 'Formidable English stone fortress besieged and captured in August 1696 by Baron de Saint-Castin and Pierre Le Moyne d\'Iberville commanding 500 Abenaki warriors in war canoes.',
+    people: ['9KDS-BKX']
+  },
+
+  // --- 18th Century (1700s): Frontier Raids, Deportation & Revolutions ---
+  {
+    id: 'groton',
+    title: 'Groton, Massachusetts',
+    category: 'battle',
+    era: '18th',
+    coords: { lat: 42.6112, lng: -71.5745 },
+    desc: 'Scene of the Queen Anne\'s War raid on August 8, 1704. 14-year-old Matthias Farnsworth was captured in the fields and marched 300 miles barefoot to Montreal, founding the Phaneuf dynasty.',
+    people: ['LKK6-RYV']
+  },
+  {
+    id: 'grand-pre',
+    title: 'Grand-Pré & Petitcodiac, Acadia',
+    category: 'battle',
+    era: '18th',
+    coords: { lat: 45.1084, lng: -64.3094 },
+    desc: 'Site of the 1755 Grand Dérangement. Acadian partisan fighter Charles Maillet led armed guerrilla resistance along the Petitcodiac until captured at gunpoint by British Rangers in 1756.',
+    people: ['LW1B-ZMR']
+  },
+  {
+    id: 'swearingen-fort',
+    title: 'Swearingen\'s Fort (Fayette County, PA)',
+    category: 'battle',
+    era: '18th',
+    coords: { lat: 39.7820, lng: -79.8320 },
+    desc: 'Frontier stockade in Springhill Township built by Captain Van Swearingen ("Indian Van") on the disputed Ohio Valley frontier before serving in the Continental Army.',
+    people: ['LB67-R2J']
+  },
+  {
+    id: 'saratoga',
+    title: 'Saratoga Battlefield, New York',
+    category: 'battle',
+    era: '18th',
+    coords: { lat: 43.0324, lng: -73.5878 },
+    desc: '1777 Saratoga Campaign. Captain Van Swearingen commanded men in Daniel Morgan\'s elite rifle corps before being captured and personally interrogated by British General Simon Fraser.',
+    people: ['LB67-R2J']
+  },
+  {
+    id: 'yorktown',
+    title: 'Yorktown, Virginia',
+    category: 'battle',
+    era: '18th',
+    coords: { lat: 37.2388, lng: -76.5097 },
+    desc: 'October 1781 Siege of Yorktown. Captain Antoine Paulin served in Colonel Moses Hazen\'s 2nd Canadian Regiment under George Washington when General Cornwallis surrendered.',
+    people: ['L4WD-WP8']
+  },
+
+  // --- 19th Century (1800s): The New England Mill Exodus ---
+  {
+    id: 'saint-valentin',
+    title: 'Saint-Valentin, Quebec',
+    category: 'immigration',
+    era: '19th',
+    coords: { lat: 45.1833, lng: -73.3167 },
+    desc: 'Richelieu River farming parish. Birthplace of Pierre Eno (1882) and home of William Eno. The tragic 1884 death of Josephine Poirier prompted William to relocate his children to Lowell.',
+    people: ['LB2Q-2LK', '9NF5-87T', 'GV5P-3RH', 'LDHZ-S4B']
+  },
+  {
+    id: 'rimouski',
+    title: 'Kamouraska & Rimouski, Quebec',
+    category: 'immigration',
+    era: '19th',
+    coords: { lat: 48.4488, lng: -68.5240 },
+    desc: 'Lower St. Lawrence parishes of the Michaud, Ouellette, Normand, and Hudon families prior to their departure for the Fall River cotton textile mills.',
+    people: ['99H8-3PS', 'LZKF-68P', 'LYGW-92H', 'LYGW-92X']
+  },
   {
     id: 'lowell',
     title: 'Lowell, Massachusetts',
     category: 'immigration',
+    era: '19th',
     coords: { lat: 42.6425, lng: -71.3162 },
     desc: 'The historic Franco-American industrial heartland. Destination for William & Pierre Eno (~1888), Alexis & Albina Lamarre (~1886), Joseph Henri L\'Heureux (1875), and Napoleon Phaneuf (~1872).',
     people: ['GHYM-322', '9NF5-87T', 'LB2Q-2LK', '9NF5-871', 'GLRP-DPJ', 'K266-GQ5', 'K2TL-BCX', '9VNH-9FG']
@@ -531,97 +896,153 @@ const MAP_LOCATIONS = [
     id: 'fallriver',
     title: 'Fall River, Massachusetts',
     category: 'cemetery',
+    era: '19th',
     coords: { lat: 41.7015, lng: -71.1550 },
-    desc: 'Textile mill community in Ward 2 and site of Notre Dame Cemetery, where 3rd great-grandparents Augustin Normand (1896) and Emélie Hudon (1907) are interred. Joseph Michaud died here in 1921.',
+    desc: 'Textile mill community and site of Notre Dame Cemetery, where 3rd great-grandparents Augustin Normand (1896) and Emélie Hudon (1907) are interred. Joseph Michaud died here in 1921.',
     people: ['LYGW-92H', 'LYGW-92X', '99H8-3PS', 'LZKF-68P', 'L7D1-LT4', 'L5PJ-F8K']
   },
-  {
-    id: 'groton',
-    title: 'Groton, Massachusetts',
-    category: 'battle',
-    coords: { lat: 42.6112, lng: -71.5745 },
-    desc: 'Scene of the Queen Anne\'s War raid on August 8, 1704. 14-year-old Matthias Farnsworth was captured in the fields and marched 300 miles to Montreal, founding the Phaneuf dynasty.',
-    people: ['LKK6-RYV']
-  },
-  {
-    id: 'saint-valentin',
-    title: 'Saint-Valentin, Quebec',
-    category: 'immigration',
-    coords: { lat: 45.1833, lng: -73.3167 },
-    desc: 'Rural Richelieu River farming parish. Birthplace of Pierre Eno (1882) and home of William Eno. Site of the tragic 1884 death of Josephine Poirier that prompted the family\'s move to Lowell.',
-    people: ['LB2Q-2LK', '9NF5-87T', 'GV5P-3RH', 'LDHZ-S4B']
-  },
-  {
-    id: 'berthier',
-    title: 'Berthierville & Sorel, Quebec',
-    category: 'battle',
-    coords: { lat: 46.0667, lng: -73.1833 },
-    desc: 'Original frontier land concession granted to Carignan-Salières soldier Jacques Énaud dit Canada in 1665 to guard against Iroquois war parties on the Richelieu River.',
-    people: ['GM4N-59X', 'LTC5-FPN', 'GFD9-BK2', 'G7PZ-WRB', 'LCXY-QZ1']
-  },
-  {
-    id: 'riviere-ouelle',
-    title: 'Rivière-Ouelle, Quebec',
-    category: 'battle',
-    coords: { lat: 47.4333, lng: -70.0167 },
-    desc: 'Site of the October 1690 shoreline ambush during King William\'s War. Jean Pelletier and Guillaume Lizotte were among the 39 settlers who repelled Sir William Phips\' English armada.',
-    people: ['LZ8C-GTL', 'LYF3-4HN']
-  },
-  {
-    id: 'castine',
-    title: 'Pentagouet (Castine), Maine',
-    category: 'battle',
-    coords: { lat: 44.3881, lng: -68.7997 },
-    desc: 'Wilderness post founded by Jean-Vincent d\'Abbadie, 3e Baron de Saint-Castin, who married Pidianské, daughter of Grand Sagamore Madockawando.',
-    people: ['9KDS-BKX', 'L4SP-V3B']
-  },
-  {
-    id: 'pemaquid',
-    title: 'Fort William Henry (Pemaquid), Maine',
-    category: 'battle',
-    coords: { lat: 43.8797, lng: -69.5250 },
-    desc: 'English stone fortress besieged and destroyed in 1696 by Baron de Saint-Castin and Pierre Le Moyne d\'Iberville with Abenaki war parties in canoes.',
-    people: ['9KDS-BKX']
-  },
-  {
-    id: 'cap-rouge',
-    title: 'Cap-Rouge, Quebec',
-    category: 'battle',
-    coords: { lat: 46.7500, lng: -71.3500 },
-    desc: 'Site of the June 10, 1653 Iroquois ambush where Pierre LePicard-Gareman was martyred while defending his 10-year-old son Charles.',
-    people: ['LRCC-3XL']
-  },
+
+  // --- 20th Century (1900s): Maritime Homeland & Mom\'s Arrival ---
   {
     id: 'saint-ignace',
     title: 'Saint-Ignace, Kent Co., New Brunswick',
     category: 'immigration',
+    era: '20th',
     coords: { lat: 46.7167, lng: -64.9667 },
-    desc: 'The 300-year Acadian homeland of the Caissie and Gallant families, who stayed in the Maritimes until Diane Caissie and Eugene immigrated to Massachusetts in 1963.',
+    desc: 'The 300-year Acadian homeland of the Caissie and Gallant families, who stayed in the Maritimes until Diane Caissie and father Eugene immigrated to Massachusetts in 1963.',
     people: ['PW92-7TK', 'G3ZY-8HH', 'PW92-ZRG', 'P9GJ-VQK', 'GDQD-SQH']
+  }
+];
+
+const MAP_ROUTES = [
+  // 17th Century Transatlantic Crossings (geodesic sailing arcs across the Atlantic)
+  {
+    id: 'transatlantic-eno',
+    era: '17th',
+    name: '1665 Jacques Énaud / Le Paix Crossing (Normandy ➔ Quebec)',
+    color: '#f59e0b',
+    weight: 3,
+    path: [
+      { lat: 49.1458, lng: 0.2278 },   // Lisieux, Normandy
+      { lat: 49.9246, lng: 1.0775 },   // Dieppe
+      { lat: 50.5, lng: -15.0 },       // North Atlantic
+      { lat: 48.5, lng: -45.0 },       // Grand Banks
+      { lat: 47.5, lng: -60.0 },       // Gulf of St. Lawrence
+      { lat: 46.8139, lng: -71.2082 }  // Quebec City
+    ]
   },
   {
-    id: 'swearingen-fort',
-    title: 'Swearingen\'s Fort (Fayette County, PA)',
-    category: 'battle',
-    coords: { lat: 39.7820, lng: -79.8320 },
-    desc: 'Pioneer stockade in Springhill Township built on a 468-acre tract, home to Captain Van Swearingen ("Indian Van") on the Ohio Valley frontier.',
-    people: ['LB67-R2J']
+    id: 'transatlantic-acadia',
+    era: '17th',
+    name: '1632 & 1665 Acadian Crossing (La Rochelle ➔ Port-Royal)',
+    color: '#10b981',
+    weight: 3,
+    path: [
+      { lat: 46.1603, lng: -1.1511 },  // La Rochelle
+      { lat: 45.0, lng: -20.0 },       // Mid-Atlantic
+      { lat: 44.0, lng: -45.0 },
+      { lat: 44.7431, lng: -65.5172 }  // Port-Royal, Acadia
+    ]
   },
   {
-    id: 'yorktown',
-    title: 'Yorktown, Virginia',
-    category: 'battle',
-    coords: { lat: 37.2388, lng: -76.5097 },
-    desc: 'October 1781 Siege of Yorktown. Captain Antoine Paulin served with Hazen\'s 2nd Canadian Regiment under George Washington when General Cornwallis surrendered.',
-    people: ['L4WD-WP8']
+    id: 'transatlantic-cloutier',
+    era: '17th',
+    name: '1634 Percheron Pioneer Crossing (Perche ➔ Quebec)',
+    color: '#8b5cf6',
+    weight: 2.5,
+    path: [
+      { lat: 48.5206, lng: 0.5456 },   // Mortagne-au-Perche
+      { lat: 49.4432, lng: 0.1000 },   // Le Havre / St. Malo
+      { lat: 49.0, lng: -25.0 },
+      { lat: 47.0, lng: -52.0 },
+      { lat: 46.8139, lng: -71.2082 }  // Quebec City
+    ]
   },
   {
-    id: 'saratoga',
-    title: 'Saratoga Battlefield, New York',
-    category: 'battle',
-    coords: { lat: 43.0324, lng: -73.5878 },
-    desc: '1777 Saratoga Campaign. Captain Van Swearingen fought under Daniel Morgan\'s elite rifle corps before being captured and questioned by General Fraser.',
-    people: ['LB67-R2J']
+    id: 'transatlantic-leroux',
+    era: '17th',
+    name: '1668 Filles du Roi Voyage (Paris ➔ Quebec)',
+    color: '#ec4899',
+    weight: 2.5,
+    path: [
+      { lat: 48.8566, lng: 2.3522 },   // Paris
+      { lat: 49.9246, lng: 1.0775 },   // Dieppe
+      { lat: 49.5, lng: -30.0 },
+      { lat: 47.8, lng: -55.0 },
+      { lat: 46.8139, lng: -71.2082 }  // Quebec City
+    ]
+  },
+
+  // 18th Century Routes
+  {
+    id: 'groton-march',
+    era: '18th',
+    name: '1704 Groton Boy Captive March Route (Groton ➔ Montreal)',
+    color: '#f59e0b',
+    weight: 2.5,
+    path: [
+      { lat: 42.6112, lng: -71.5745 }, // Groton, MA
+      { lat: 43.6, lng: -72.3 },       // Connecticut River Valley
+      { lat: 44.5, lng: -72.5 },       // Lake Champlain Route
+      { lat: 45.54, lng: -73.65 }      // Montreal
+    ]
+  },
+  {
+    id: 'yorktown-march',
+    era: '18th',
+    name: '1781 Hazen\'s Canadian Regiment March (NY ➔ Yorktown)',
+    color: '#38bdf8',
+    weight: 2.5,
+    path: [
+      { lat: 44.9, lng: -73.4 },       // Fort Saint-Jean / Lake Champlain
+      { lat: 41.5, lng: -74.0 },       // Newburgh, NY
+      { lat: 39.95, lng: -75.16 },     // Philadelphia
+      { lat: 37.2388, lng: -76.5097 }  // Yorktown, VA
+    ]
+  },
+
+  // 19th Century Mill Rail Migration Routes
+  {
+    id: 'richelieu-lowell',
+    era: '19th',
+    name: '1888 Eno & Lamarre Richelieu Railway Route (Saint-Valentin ➔ Lowell)',
+    color: '#38bdf8',
+    weight: 3,
+    path: [
+      { lat: 45.1833, lng: -73.3167 }, // Saint-Valentin, QC
+      { lat: 44.4759, lng: -73.2121 }, // Burlington, VT
+      { lat: 43.2, lng: -72.4 },       // Concord, NH
+      { lat: 42.6425, lng: -71.3162 }  // Lowell, MA
+    ]
+  },
+  {
+    id: 'stlawrence-fallriver',
+    era: '19th',
+    name: '1888–1890 Michaud & Normand Textile Route (Kamouraska ➔ Fall River)',
+    color: '#8b5cf6',
+    weight: 3,
+    path: [
+      { lat: 48.4488, lng: -68.5240 }, // Rimouski, QC
+      { lat: 47.5667, lng: -69.8667 }, // Kamouraska
+      { lat: 46.8139, lng: -71.2082 }, // Quebec
+      { lat: 42.3601, lng: -71.0589 }, // Boston
+      { lat: 41.7015, lng: -71.1550 }  // Fall River, MA
+    ]
+  },
+
+  // 20th Century Acadian Migration
+  {
+    id: 'acadian-mass',
+    era: '20th',
+    name: '1963 Caissie Family Acadian Migration (Saint-Ignace ➔ Massachusetts)',
+    color: '#10b981',
+    weight: 3,
+    path: [
+      { lat: 46.7167, lng: -64.9667 }, // Saint-Ignace, NB
+      { lat: 45.27, lng: -66.06 },     // Saint John
+      { lat: 43.66, lng: -70.25 },     // Portland, ME
+      { lat: 42.6425, lng: -71.3162 }  // Lowell, MA
+    ]
   }
 ];
 
@@ -642,8 +1063,8 @@ function initGoogleMap() {
   ];
 
   googleMapInstance = new google.maps.Map(mapElement, {
-    center: { lat: 43.8, lng: -72.0 },
-    zoom: 6,
+    center: { lat: 46.0, lng: -40.0 },
+    zoom: 4,
     styles: darkStyles,
     mapTypeControl: false,
     streetViewControl: false,
@@ -700,55 +1121,29 @@ function initGoogleMap() {
       showMapLocationCard(loc);
     });
 
-    mapMarkers.push({ marker, category: loc.category });
+    mapMarkers.push({ marker, category: loc.category, era: loc.era, loc });
   });
 
-  // Add Historical Migration Polylines
-  // 1. 1704 Groton to Montreal Captive March Route
-  new google.maps.Polyline({
-    path: [
-      { lat: 42.6112, lng: -71.5745 }, // Groton
-      { lat: 43.6, lng: -72.3 },       // Connecticut River Valley
-      { lat: 44.5, lng: -72.5 },       // Lake Champlain Route
-      { lat: 45.54, lng: -73.65 }      // Montreal / Sault-au-Récollet
-    ],
-    geodesic: true,
-    strokeColor: '#f59e0b',
-    strokeOpacity: 0.7,
-    strokeWeight: 2,
-    map: googleMapInstance
-  });
+  // Add Routes (Polylines)
+  MAP_ROUTES.forEach(route => {
+    const polyline = new google.maps.Polyline({
+      path: route.path,
+      geodesic: true,
+      strokeColor: route.color,
+      strokeOpacity: 0.85,
+      strokeWeight: route.weight || 2.5,
+      map: googleMapInstance
+    });
 
-  // 2. ~1888 Eno Richelieu Railway Route to Lowell
-  new google.maps.Polyline({
-    path: [
-      { lat: 45.1833, lng: -73.3167 }, // Saint-Valentin
-      { lat: 44.4759, lng: -73.2121 }, // Burlington
-      { lat: 42.6425, lng: -71.3162 }  // Lowell
-    ],
-    geodesic: true,
-    strokeColor: '#38bdf8',
-    strokeOpacity: 0.8,
-    strokeWeight: 3,
-    map: googleMapInstance
-  });
+    polyline.addListener('click', () => {
+      focusOnMapLocation(route.path[0].lat, route.path[0].lng, route.name, 6);
+    });
 
-  // 3. 1963 Acadian Migration to Massachusetts
-  new google.maps.Polyline({
-    path: [
-      { lat: 46.7167, lng: -64.9667 }, // Saint-Ignace, NB
-      { lat: 45.3, lng: -66.0 },       // Saint John
-      { lat: 43.66, lng: -70.25 },     // Portland, ME
-      { lat: 42.6425, lng: -71.3162 }  // Massachusetts
-    ],
-    geodesic: true,
-    strokeColor: '#10b981',
-    strokeOpacity: 0.8,
-    strokeWeight: 2.5,
-    map: googleMapInstance
+    mapPolylines.push({ polyline, era: route.era, route });
   });
 
   googleMapInstance.fitBounds(mapInitialBounds);
+  renderMapEraTimeline('all');
 }
 
 function showMapLocationCard(loc) {
@@ -758,7 +1153,11 @@ function showMapLocationCard(loc) {
   const descEl = document.getElementById('mapCardDesc');
   const ancEl = document.getElementById('mapCardAncestors');
 
-  catEl.textContent = loc.category.toUpperCase();
+  const eraTag = loc.era === '17th' ? '17e SIÈCLE' :
+                 loc.era === '18th' ? '18e SIÈCLE' :
+                 loc.era === '19th' ? '19e SIÈCLE' : '20e SIÈCLE';
+
+  catEl.textContent = `${eraTag} • ${loc.category.toUpperCase()}`;
   titleEl.textContent = loc.title;
   descEl.textContent = loc.desc;
 
@@ -776,16 +1175,116 @@ function closeMapCard() {
   document.getElementById('mapLocationCard').style.display = 'none';
 }
 
+function setMapEra(era, el) {
+  currentMapEra = era;
+  document.querySelectorAll('#eraFilterBar .era-chip').forEach(c => c.classList.remove('active'));
+  if (el) el.classList.add('active');
+
+  applyMapFilters();
+
+  // Smooth camera fly-to based on era
+  if (googleMapInstance) {
+    if (era === '17th') {
+      googleMapInstance.panTo({ lat: 48.0, lng: -38.0 });
+      googleMapInstance.setZoom(4);
+    } else if (era === '18th') {
+      googleMapInstance.panTo({ lat: 42.5, lng: -73.5 });
+      googleMapInstance.setZoom(6);
+    } else if (era === '19th') {
+      googleMapInstance.panTo({ lat: 44.0, lng: -72.0 });
+      googleMapInstance.setZoom(7);
+    } else if (era === '20th') {
+      googleMapInstance.panTo({ lat: 44.8, lng: -67.5 });
+      googleMapInstance.setZoom(6);
+    } else {
+      if (mapInitialBounds) googleMapInstance.fitBounds(mapInitialBounds);
+    }
+  }
+
+  renderMapEraTimeline(era);
+}
+
 function setMapFilter(cat, el) {
+  currentMapCategory = cat;
   document.querySelectorAll('#view-map .chip').forEach(c => c.classList.remove('active'));
   if (el) el.classList.add('active');
 
+  applyMapFilters();
+}
+
+function applyMapFilters() {
   mapMarkers.forEach(m => {
-    if (cat === 'all' || m.category === cat) {
+    const eraMatch = currentMapEra === 'all' || m.era === currentMapEra;
+    const catMatch = currentMapCategory === 'all' || m.category === currentMapCategory;
+    if (eraMatch && catMatch) {
       m.marker.setMap(googleMapInstance);
     } else {
       m.marker.setMap(null);
     }
   });
+
+  mapPolylines.forEach(p => {
+    const eraMatch = currentMapEra === 'all' || p.era === currentMapEra;
+    if (eraMatch) {
+      p.polyline.setMap(googleMapInstance);
+    } else {
+      p.polyline.setMap(null);
+    }
+  });
+}
+
+function renderMapEraTimeline(era) {
+  const container = document.getElementById('mapEraTimelineList');
+  const badge = document.getElementById('eraTimelineBadge');
+  const title = document.getElementById('eraTimelineTitle');
+  if (!container) return;
+
+  const filteredLocs = MAP_LOCATIONS.filter(l => era === 'all' || l.era === era);
+  if (badge) badge.textContent = `${filteredLocs.length} Historical Sites`;
+  if (title) {
+    title.textContent = era === '17th' ? '17e Siècle Atlantic Chronicles' :
+                       era === '18th' ? '18e Siècle Frontier & Battles' :
+                       era === '19th' ? '19e Siècle Mill Migration' :
+                       era === '20th' ? '20e Siècle Modern Heritage' : 'Historical Migration Sites';
+  }
+
+  container.innerHTML = filteredLocs.map(loc => {
+    const peoplePills = (loc.people || []).map(pid => {
+      const p = people[pid];
+      const pName = p ? p.n : pid;
+      return `<button class="ancestor-link-btn" onclick="openPersonModal('${pid}')">👤 ${escapeHtml(pName)}</button>`;
+    }).join('');
+
+    return `
+      <div class="era-timeline-card" onclick="focusOnMapLocation(${loc.coords.lat}, ${loc.coords.lng}, '${escapeHtml(loc.title)}')">
+        <div class="era-timeline-card-header">
+          <span class="story-conflict" style="font-size:0.68rem;">${escapeHtml(loc.category.toUpperCase())}</span>
+          <span style="font-size:0.75rem; color:var(--accent-gold); font-weight:700;">📍 Focus Map</span>
+        </div>
+        <div class="era-timeline-card-title">${escapeHtml(loc.title)}</div>
+        <div class="era-timeline-card-desc">${escapeHtml(loc.desc)}</div>
+        <div class="story-ancestors" style="margin-top:6px;" onclick="event.stopPropagation()">
+          ${peoplePills}
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function focusOnMapLocation(lat, lng, title, zoom = 9) {
+  switchTab('map');
+  if (googleMapInstance) {
+    google.maps.event.trigger(googleMapInstance, 'resize');
+    googleMapInstance.panTo({ lat, lng });
+    googleMapInstance.setZoom(zoom);
+  }
+
+  const matched = MAP_LOCATIONS.find(l => 
+    Math.abs(l.coords.lat - lat) < 0.05 && Math.abs(l.coords.lng - lng) < 0.05
+  );
+
+  if (matched) {
+    showMapLocationCard(matched);
+  }
 }
 

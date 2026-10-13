@@ -115,6 +115,7 @@
         <div class="tree-controls">
           <button class="tree-root-btn active" id="btnRootJerome" onclick="setTreeRoot('jerome')">Jerome Eno Line</button>
           <button class="tree-root-btn" id="btnRootAmy" onclick="setTreeRoot('amy')">Amy Whisenhunt Line</button>
+          <button class="tree-root-btn" id="btnRootFounders" onclick="setTreeRoot('founders')">⛵ 1600s Founders</button>
         </div>
 
         <div class="tree-canvas-wrap" id="treeCanvas">
@@ -127,14 +128,38 @@
         <div style="margin-bottom: 14px;">
           <h2 style="font-size: 1.3rem; font-weight:800; color:#fff;">Ancestral Geography & Migration Map</h2>
           <p style="font-size: 0.85rem; color: var(--text-secondary); margin-top:4px;">
-            Explore the historical settlements, battlegrounds, and migration corridors connecting New France, Acadia, and New England.
+            Explore the historical settlements, battlegrounds, and migration corridors connecting 17th-century France, Acadia, New France, and Massachusetts.
           </p>
         </div>
 
-        <div class="filter-chips-wrap">
-          <button class="chip active" onclick="setMapFilter('all', this)">All Locations (13)</button>
-          <button class="chip" onclick="setMapFilter('battle', this)">🎖️ Battles & Forts</button>
+        <!-- Century / Era Horizontal Carousel -->
+        <div class="era-filter-bar" id="eraFilterBar">
+          <button class="era-chip active" onclick="setMapEra('all', this)">
+            <span class="era-icon">🌐</span>
+            <div class="era-text"><span>All Eras</span><small>1600–Present</small></div>
+          </button>
+          <button class="era-chip" onclick="setMapEra('17th', this)">
+            <span class="era-icon">⛵</span>
+            <div class="era-text"><span>17e Siècle</span><small>1600s Crossing</small></div>
+          </button>
+          <button class="era-chip" onclick="setMapEra('18th', this)">
+            <span class="era-icon">⚔️</span>
+            <div class="era-text"><span>18e Siècle</span><small>1700s Frontier</small></div>
+          </button>
+          <button class="era-chip" onclick="setMapEra('19th', this)">
+            <span class="era-icon">🏭</span>
+            <div class="era-text"><span>19e Siècle</span><small>1800s Mills</small></div>
+          </button>
+          <button class="era-chip" onclick="setMapEra('20th', this)">
+            <span class="era-icon">🍁</span>
+            <div class="era-text"><span>20e Siècle</span><small>1900s Acadian</small></div>
+          </button>
+        </div>
+
+        <div class="filter-chips-wrap" style="margin-top:10px;">
+          <button class="chip active" onclick="setMapFilter('all', this)">All Types</button>
           <button class="chip" onclick="setMapFilter('immigration', this)">🚢 Migrations & Towns</button>
+          <button class="chip" onclick="setMapFilter('battle', this)">🎖️ Battles & Forts</button>
           <button class="chip" onclick="setMapFilter('cemetery', this)">⛪ Cemeteries</button>
         </div>
 
@@ -153,6 +178,17 @@
           <div style="margin-top:10px;">
             <div style="font-size:0.72rem; color:var(--text-muted); text-transform:uppercase; font-weight:700; margin-bottom:4px;">Connected Relatives</div>
             <div id="mapCardAncestors" class="story-ancestors"></div>
+          </div>
+        </div>
+
+        <!-- Synchronized Era Timeline Reel -->
+        <div id="mapEraTimelineWrap" style="margin-top: 18px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+            <h3 id="eraTimelineTitle" style="font-size:1.05rem; font-weight:700; color:#fff;">Historical Milestones</h3>
+            <span id="eraTimelineBadge" class="era-counter-badge">Events</span>
+          </div>
+          <div id="mapEraTimelineList" class="era-timeline-grid">
+            <!-- Timeline milestone cards rendered dynamically -->
           </div>
         </div>
       </section>
@@ -242,6 +278,24 @@
             <div class="vital-val" id="modalBurial">—</div>
           </div>
         </div>
+      </div>
+
+      <!-- Ancestral Geography & Mini-Map -->
+      <div id="modalGeoSection" class="modal-geo-section" style="display:none;">
+        <div class="modal-section-title">Ancestral Geography & Origin</div>
+        <div class="geo-badge-row">
+          <span class="geo-pin-icon">📍</span>
+          <span id="modalGeoLocation" class="geo-location-name">—</span>
+        </div>
+        <div id="personMiniMap" class="person-mini-map-frame"></div>
+        <button id="modalViewOnMapBtn" class="btn-geo-action" onclick="openPersonOnMainMap()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"></polygon>
+            <line x1="8" y1="2" x2="8" y2="18"></line>
+            <line x1="16" y1="6" x2="16" y2="22"></line>
+          </svg>
+          <span>View on Historical Map</span>
+        </button>
       </div>
 
       <div>
