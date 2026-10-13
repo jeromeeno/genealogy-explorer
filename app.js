@@ -117,6 +117,10 @@ function switchTab(tabId, el) {
   document.querySelectorAll(`.nav-tab[data-tab="${tabId}"]`).forEach(btn => btn.classList.add('active'));
   if (el) el.classList.add('active');
   
+  if (tabId === 'tree') {
+    renderTree(false);
+  }
+
   if (tabId === 'map' && googleMapInstance) {
     google.maps.event.trigger(googleMapInstance, 'resize');
     const hubs = getEffectiveMapHubs();
@@ -346,43 +350,307 @@ function createPersonCardHtml(p) {
   `;
 }
 
-// ================= INTERACTIVE TREE VIEW =================
+// ================= INTERACTIVE ZOOMABLE TREE VIEW =================
+currentTreeRootId = 'PW92-F2S'; // Jerome Eno by default
+let treeRootMode = 'jerome'; // 'jerome', 'amy', 'founders'
+let treeMaxDepth = 4; // Default 4 generations
+let treeExpandedMap = {}; // pid -> boolean (manual branch expand/collapse overrides)
+let treeHistory = ['PW92-F2S']; // Breadcrumb trace
+let treeZoom = 0.85;
+let treePanX = 60;
+let treePanY = 80;
+let isTreePanning = false;
+let treePanStartX = 0;
+let treePanStartY = 0;
+let isTreeEventsBound = false;
+
 function setTreeRoot(mode) {
   document.querySelectorAll('.tree-root-btn').forEach(btn => btn.classList.remove('active'));
+  treeRootMode = mode;
   
   if (mode === 'jerome') {
     document.getElementById('btnRootJerome')?.classList.add('active');
     currentTreeRootId = 'PW92-F2S';
+    treeHistory = ['PW92-F2S'];
+    treeExpandedMap = {};
+    resetTreeViewport();
+    renderTree(true);
   } else if (mode === 'amy') {
     document.getElementById('btnRootAmy')?.classList.add('active');
     currentTreeRootId = 'PW92-6SQ';
+    treeHistory = ['PW92-6SQ'];
+    treeExpandedMap = {};
+    resetTreeViewport();
+    renderTree(true);
   } else if (mode === 'founders') {
     document.getElementById('btnRootFounders')?.classList.add('active');
     currentTreeRootId = 'founders';
+    renderTree(true);
   }
-  
-  renderTree();
 }
 
-function renderTree() {
-  const container = document.getElementById('treeCanvas');
-  
+function setTreeMaxDepth(depth, el) {
+  treeMaxDepth = depth;
+  document.querySelectorAll('.depth-chip').forEach(c => c.classList.remove('active'));
+  if (el) el.classList.add('active');
+  renderTree(false);
+}
+
+function focusTreeOnPerson(personId, event) {
+  if (event) event.stopPropagation();
+  if (!people[personId]) return;
+
+  // If currently in founders mode, switch back to visual tree viewport
+  if (treeRootMode === 'founders') {
+    document.querySelectorAll('.tree-root-btn').forEach(btn => btn.classList.remove('active'));
+    const p = people[personId];
+    if (p.s === 'amy') {
+      document.getElementById('btnRootAmy')?.classList.add('active');
+      treeRootMode = 'amy';
+    } else {
+      document.getElementById('btnRootJerome')?.classList.add('active');
+      treeRootMode = 'jerome';
+    }
+  }
+
+  if (currentTreeRootId !== personId) {
+    if (!treeHistory.includes(personId)) {
+      treeHistory.push(personId);
+    }
+    currentTreeRootId = personId;
+    resetTreeViewport();
+  }
+  renderTree(true);
+}
+
+function jumpToTreeBreadcrumb(index) {
+  if (index >= 0 && index < treeHistory.length) {
+    treeHistory = treeHistory.slice(0, index + 1);
+    currentTreeRootId = treeHistory[index];
+    resetTreeViewport();
+    renderTree(true);
+  }
+}
+
+function toggleTreeBranch(personId, event) {
+  if (event) event.stopPropagation();
+  const current = treeExpandedMap[personId] !== undefined ? treeExpandedMap[personId] : true;
+  treeExpandedMap[personId] = !current;
+  renderTree(false);
+}
+
+function buildTreeLayout(rootId, maxDepth, expandedMap) {
+  const nodeWidth = 240;
+  const nodeHeight = 90;
+  const colGap = 76;
+  const rowGap = 20;
+
+  let leafY = 20;
+  const nodes = [];
+  const links = [];
+  const visited = new Set();
+  let maxTreeX = 0;
+
+  function processPerson(id, depth) {
+    if (!id || !people[id] || visited.has(id)) return null;
+    visited.add(id);
+
+    const p = people[id];
+    const isExpanded = expandedMap[id] !== undefined ? expandedMap[id] : (depth < maxDepth);
+    const parents = (p.p && p.p.length > 0) ? p.p.filter(pid => Boolean(people[pid])) : [];
+    const hasParents = parents.length > 0;
+
+    let parentNodes = [];
+    if (isExpanded && hasParents) {
+      for (const parId of parents) {
+        const parNode = processPerson(parId, depth + 1);
+        if (parNode) parentNodes.push(parNode);
+      }
+    }
+
+    let y;
+    if (parentNodes.length === 0) {
+      y = leafY;
+      leafY += (nodeHeight + rowGap);
+    } else if (parentNodes.length === 1) {
+      y = parentNodes[0].y;
+    } else {
+      y = (parentNodes[0].y + parentNodes[parentNodes.length - 1].y) / 2;
+    }
+
+    const x = depth * (nodeWidth + colGap) + 40;
+    if (x + nodeWidth > maxTreeX) maxTreeX = x + nodeWidth;
+
+    const isJerome = (p.s === 'jerome');
+    const node = {
+      id,
+      person: p,
+      depth,
+      x,
+      y,
+      isExpanded,
+      hasParents,
+      parentCount: parents.length,
+      isJerome,
+      isRoot: (id === rootId)
+    };
+    nodes.push(node);
+
+    for (const parNode of parentNodes) {
+      links.push({
+        childId: id,
+        parentId: parNode.id,
+        isJerome,
+        x1: x + nodeWidth,
+        y1: y + nodeHeight / 2,
+        x2: parNode.x,
+        y2: parNode.y + nodeHeight / 2
+      });
+    }
+
+    return node;
+  }
+
+  const rootNode = processPerson(rootId, 0);
+  return { nodes, links, totalWidth: maxTreeX + 80, totalHeight: leafY + 40, rootNode };
+}
+
+function renderTree(shouldCenter = false) {
+  const viewportWrap = document.getElementById('treeViewportWrapper');
+  const toolbarSub = document.getElementById('treeToolbarSub');
+  const foundersWrap = document.getElementById('foundersViewWrap');
+
   if (currentTreeRootId === 'founders') {
-    renderFoundersTree(container);
+    if (viewportWrap) viewportWrap.style.display = 'none';
+    if (toolbarSub) toolbarSub.style.display = 'none';
+    if (foundersWrap) {
+      foundersWrap.style.display = 'block';
+      renderFoundersTree(foundersWrap);
+    }
     return;
   }
+
+  if (viewportWrap) viewportWrap.style.display = 'block';
+  if (toolbarSub) toolbarSub.style.display = 'flex';
+  if (foundersWrap) foundersWrap.style.display = 'none';
+
+  renderTreeBreadcrumbs();
 
   const rootPerson = people[currentTreeRootId];
   if (!rootPerson) {
-    container.innerHTML = '<p style="color:var(--text-muted);">Root person not found.</p>';
+    const nodesLayer = document.getElementById('treeNodes');
+    if (nodesLayer) nodesLayer.innerHTML = '<p style="padding:40px; color:var(--text-muted);">Root person not found.</p>';
     return;
   }
 
-  // Render 4 levels of ancestors starting from root
-  let html = `<div style="display:flex; flex-direction:column; gap:20px;">`;
-  html += renderTreeNodeLevel([currentTreeRootId], 0);
-  html += `</div>`;
+  const { nodes, links, totalWidth, totalHeight, rootNode } = buildTreeLayout(currentTreeRootId, treeMaxDepth, treeExpandedMap);
+
+  // Render SVG connections
+  renderTreeSvgLinks(links, totalWidth, totalHeight);
+
+  // Render Person Cards
+  const nodesLayer = document.getElementById('treeNodes');
+  if (nodesLayer) {
+    nodesLayer.innerHTML = nodes.map(renderTreeNodeCard).join('');
+  }
+
+  initTreeViewportEvents();
+
+  if (shouldCenter && rootNode) {
+    centerTreeOnNode(rootNode);
+  } else {
+    applyTreeTransform();
+  }
+}
+
+function renderTreeBreadcrumbs() {
+  const container = document.getElementById('treeBreadcrumbs');
+  if (!container) return;
+  if (treeHistory.length <= 1) {
+    const rootP = people[currentTreeRootId];
+    const name = rootP ? rootP.n : 'Root';
+    container.innerHTML = `<span>Pedigree Origin:</span> <strong style="color:#fff;">${escapeHtml(name)}</strong>`;
+    return;
+  }
+
+  let html = `<span>Trace:</span> `;
+  treeHistory.forEach((id, idx) => {
+    const p = people[id];
+    const name = p ? p.n : id;
+    const isCurrent = (idx === treeHistory.length - 1);
+    if (idx > 0) html += `<span class="tree-breadcrumb-sep">➔</span>`;
+    if (isCurrent) {
+      html += `<strong style="color:var(--accent-gold-light);">${escapeHtml(name)}</strong>`;
+    } else {
+      html += `<button class="tree-breadcrumb-item" onclick="jumpToTreeBreadcrumb(${idx})">${escapeHtml(name)}</button>`;
+    }
+  });
   container.innerHTML = html;
+}
+
+function renderTreeNodeCard(node) {
+  const p = node.person;
+  const isJerome = node.isJerome;
+  const sideClass = isJerome ? 'side-jerome' : 'side-amy';
+  const rootClass = node.isRoot ? 'is-root' : '';
+  const relStr = getPersonRelationship(p);
+  const relClass = isJerome ? '' : 'rel-amy';
+  const genderIcon = p.g === 'M' ? '♂' : (p.g === 'F' ? '♀' : '');
+  const origin = getPersonOrigin(p);
+
+  let toggleBtnHtml = '';
+  if (node.hasParents) {
+    const btnLabel = node.isExpanded ? '−' : `+ ${node.parentCount}`;
+    const btnTitle = node.isExpanded ? 'Collapse Parents' : `Expand ${node.parentCount} Parents`;
+    toggleBtnHtml = `
+      <button class="tree-btn-toggle-branch" onclick="toggleTreeBranch('${p.id}', event)" title="${btnTitle}">
+        ${btnLabel}
+      </button>
+    `;
+  }
+
+  const focusBtnHtml = !node.isRoot ? `
+    <button class="tree-btn-focus" onclick="focusTreeOnPerson('${p.id}', event)" title="Focus pedigree tree on ${escapeHtml(p.n)}">
+      🎯 Focus
+    </button>
+  ` : `<span style="font-size:0.68rem; font-weight:700; color:var(--accent-gold);">★ Root</span>`;
+
+  return `
+    <div class="tree-person-card ${sideClass} ${rootClass}" 
+         style="left:${node.x}px; top:${node.y}px;"
+         onclick="openPersonModal('${p.id}')">
+      <div class="tree-card-top-row">
+        <span class="tree-card-rel ${relClass}">${escapeHtml(relStr)}</span>
+        <span class="tree-card-gender">${genderIcon}</span>
+      </div>
+      <div class="tree-card-name" title="${escapeHtml(p.n)}">${escapeHtml(p.n)}</div>
+      <div class="tree-card-dates">
+        ${escapeHtml(p.b ? p.b.slice(0, 10) : '—')} – ${escapeHtml(p.d ? p.d.slice(0, 10) : (p.b && parseInt(p.b) < 1920 ? 'Deceased' : 'Living'))}
+      </div>
+      ${origin ? `<div class="tree-card-geo" title="${escapeHtml(origin)}">📍 ${escapeHtml(origin)}</div>` : ''}
+      <div class="tree-card-actions-row">
+        ${focusBtnHtml}
+        ${toggleBtnHtml}
+      </div>
+    </div>
+  `;
+}
+
+function renderTreeSvgLinks(links, totalWidth, totalHeight) {
+  const svg = document.getElementById('treeSvg');
+  if (!svg) return;
+  svg.setAttribute('width', Math.max(totalWidth, 1200));
+  svg.setAttribute('height', Math.max(totalHeight, 800));
+
+  let pathsHtml = '';
+  for (const link of links) {
+    const { x1, y1, x2, y2, isJerome } = link;
+    const mx = (x1 + x2) / 2;
+    const d = `M ${x1} ${y1} C ${mx} ${y1}, ${mx} ${y2}, ${x2} ${y2}`;
+    const cls = isJerome ? 'tree-svg-path' : 'tree-svg-path path-amy';
+    pathsHtml += `<path d="${d}" class="${cls}" />`;
+  }
+  svg.innerHTML = pathsHtml;
 }
 
 function renderFoundersTree(container) {
@@ -401,24 +669,24 @@ function renderFoundersTree(container) {
 
   let html = `
     <div style="margin-bottom:16px;">
-      <h3 style="font-size:1.15rem; font-weight:800; color:#fff;">⚜️ 17th-Century French & Acadian Founders</h3>
+      <h3 style="font-size:1.18rem; font-weight:800; color:#fff;">⚜️ 17th-Century French & Acadian Founders</h3>
       <p style="font-size:0.85rem; color:var(--text-secondary); margin-top:4px; line-height:1.5;">
-        The direct ancestors who braved the transatlantic crossing in the 1600s aboard wooden sailing vessels to establish New France and Acadia. Tap any card to view their biography and ancestral mini-map.
+        The direct transatlantic ancestors who crossed the Atlantic in the 1600s aboard wooden sailing ships to establish New France and Acadia. Tap <strong>🌲 View Tree</strong> to trace their pedigree and explore their branch.
       </p>
     </div>
-    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap:12px;">
+    <div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap:14px;">
   `;
 
   founderCards.forEach(f => {
     const p = people[f.id];
     if (!p) return;
     html += `
-      <div class="tree-node-card" onclick="openPersonModal('${p.id}')">
-        <div style="font-size:0.68rem; color:var(--accent-gold); font-weight:700; text-transform:uppercase; margin-bottom:2px; letter-spacing:0.04em;">
+      <div class="tree-node-card">
+        <div style="font-size:0.68rem; color:var(--accent-gold); font-weight:700; text-transform:uppercase; margin-bottom:4px; letter-spacing:0.04em;">
           ${escapeHtml(f.role)}
         </div>
-        <div style="font-weight:700; color:#fff; font-size:0.95rem;">${escapeHtml(p.n)}</div>
-        <div style="font-size:0.72rem; color:#fcd34d; font-weight:600; margin-top:1px;">
+        <div style="font-weight:700; color:#fff; font-size:1.02rem;">${escapeHtml(p.n)}</div>
+        <div style="font-size:0.75rem; color:#fcd34d; font-weight:600; margin-top:2px;">
           ⚜️ ${escapeHtml(getPersonRelationship(p))}
         </div>
         <div style="font-size:0.75rem; color:var(--text-secondary); margin-top:2px;">
@@ -430,6 +698,14 @@ function renderFoundersTree(container) {
         <div style="font-size:0.7rem; color:var(--text-muted); margin-top:4px;">
           Ship: ${escapeHtml(f.ship)} • ID: ${p.id}
         </div>
+        <div style="display:flex; gap:8px; margin-top:10px; padding-top:8px; border-top:1px solid rgba(255,255,255,0.08);">
+          <button class="tree-btn-focus" style="flex:1; padding:6px 10px;" onclick="focusTreeOnPerson('${p.id}', event)">
+            🌲 Explore Tree From Here
+          </button>
+          <button class="tree-btn-focus" style="padding:6px 10px;" onclick="openPersonModal('${p.id}')">
+            👤 Details
+          </button>
+        </div>
       </div>
     `;
   });
@@ -438,53 +714,226 @@ function renderFoundersTree(container) {
   container.innerHTML = html;
 }
 
-function renderTreeNodeLevel(personIds, level) {
-  if (level > 3 || personIds.length === 0) return '';
-  
-  const levelNames = ['Self', 'Parents', 'Grandparents', 'Great-Grandparents'];
-  const nextGenParents = [];
+// Tree pan & zoom viewport handlers
+function initTreeViewportEvents() {
+  if (isTreeEventsBound) return;
+  const viewport = document.getElementById('treeViewport');
+  if (!viewport) return;
+  isTreeEventsBound = true;
 
-  let rowHtml = `
-    <div>
-      <div style="font-size:0.75rem; text-transform:uppercase; color:var(--accent-gold); font-weight:700; margin-bottom:8px; letter-spacing:0.04em;">
-        ${levelNames[level] || `Generation ${level}`}
-      </div>
-      <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap:10px;">
-  `;
+  viewport.addEventListener('mousedown', (e) => {
+    if (e.button !== 0 || e.target.closest('button') || e.target.closest('input')) return;
+    isTreePanning = true;
+    treePanStartX = e.clientX - treePanX;
+    treePanStartY = e.clientY - treePanY;
+    viewport.classList.add('dragging');
+  });
 
-  for (const pid of personIds) {
-    const p = people[pid];
-    if (p) {
-      if (p.p && p.p.length > 0) {
-        p.p.forEach(parentId => nextGenParents.push(parentId));
-      }
-      const isJerome = p.s === 'jerome';
-      const icon = isJerome ? '⚜️' : '🌸';
-      rowHtml += `
-        <div class="tree-node-card" onclick="openPersonModal('${p.id}')">
-          <div style="font-size:0.68rem; font-weight:700; color:${isJerome ? 'var(--accent-gold)' : '#f472b6'}; margin-bottom:2px;">
-            ${icon} ${escapeHtml(getPersonRelationship(p))}
-          </div>
-          <div style="font-weight:700; color:#fff; font-size:0.92rem;">${escapeHtml(p.n)}</div>
-          <div style="font-size:0.75rem; color:var(--text-secondary); margin-top:2px;">
-            ${escapeHtml(p.b ? p.b.slice(0, 10) : '—')} – ${escapeHtml(p.d ? p.d.slice(0, 10) : 'Living')}
-          </div>
-          <div class="tree-geo-pill" style="margin-top:6px;">📍 ${escapeHtml(getPersonOrigin(p))}</div>
-          <div style="font-size:0.7rem; color:var(--text-muted); margin-top:4px;">
-            ID: ${p.id}
-          </div>
-        </div>
-      `;
+  window.addEventListener('mousemove', (e) => {
+    if (!isTreePanning) return;
+    treePanX = e.clientX - treePanStartX;
+    treePanY = e.clientY - treePanStartY;
+    applyTreeTransform();
+  });
+
+  window.addEventListener('mouseup', () => {
+    if (isTreePanning) {
+      isTreePanning = false;
+      const vp = document.getElementById('treeViewport');
+      if (vp) vp.classList.remove('dragging');
+    }
+  });
+
+  viewport.addEventListener('wheel', (e) => {
+    e.preventDefault();
+    const rect = viewport.getBoundingClientRect();
+    const mouseX = e.clientX - rect.left;
+    const mouseY = e.clientY - rect.top;
+
+    const zoomFactor = e.deltaY < 0 ? 1.12 : 0.89;
+    const newZoom = Math.max(0.2, Math.min(2.2, treeZoom * zoomFactor));
+
+    treePanX = mouseX - (mouseX - treePanX) * (newZoom / treeZoom);
+    treePanY = mouseY - (mouseY - treePanY) * (newZoom / treeZoom);
+    treeZoom = newZoom;
+    applyTreeTransform();
+  }, { passive: false });
+
+  // Touch pan & pinch zoom
+  let touchStartDist = 0;
+  let touchStartZoom = 1;
+  let touchStartX = 0;
+  let touchStartY = 0;
+
+  viewport.addEventListener('touchstart', (e) => {
+    if (e.target.closest('button') || e.target.closest('input')) return;
+    if (e.touches.length === 1) {
+      isTreePanning = true;
+      touchStartX = e.touches[0].clientX - treePanX;
+      touchStartY = e.touches[0].clientY - treePanY;
+    } else if (e.touches.length === 2) {
+      isTreePanning = false;
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      touchStartDist = Math.hypot(dx, dy);
+      touchStartZoom = treeZoom;
+    }
+  }, { passive: true });
+
+  viewport.addEventListener('touchmove', (e) => {
+    if (e.touches.length === 1 && isTreePanning) {
+      treePanX = e.touches[0].clientX - touchStartX;
+      treePanY = e.touches[0].clientY - touchStartY;
+      applyTreeTransform();
+    } else if (e.touches.length === 2 && touchStartDist > 0) {
+      const dx = e.touches[0].clientX - e.touches[1].clientX;
+      const dy = e.touches[0].clientY - e.touches[1].clientY;
+      const dist = Math.hypot(dx, dy);
+      const factor = dist / touchStartDist;
+      treeZoom = Math.max(0.2, Math.min(2.2, touchStartZoom * factor));
+      applyTreeTransform();
+    }
+  }, { passive: true });
+
+  viewport.addEventListener('touchend', () => {
+    isTreePanning = false;
+    touchStartDist = 0;
+  });
+}
+
+function applyTreeTransform() {
+  const stage = document.getElementById('treeStage');
+  if (stage) {
+    stage.style.transform = `translate(${treePanX}px, ${treePanY}px) scale(${treeZoom})`;
+  }
+  const display = document.getElementById('hudZoomDisplay');
+  if (display) {
+    display.textContent = `${Math.round(treeZoom * 100)}%`;
+  }
+}
+
+function zoomTreeIn() {
+  const viewport = document.getElementById('treeViewport');
+  const cx = viewport ? viewport.clientWidth / 2 : 400;
+  const cy = viewport ? viewport.clientHeight / 2 : 300;
+  const newZoom = Math.min(2.2, treeZoom * 1.25);
+  treePanX = cx - (cx - treePanX) * (newZoom / treeZoom);
+  treePanY = cy - (cy - treePanY) * (newZoom / treeZoom);
+  treeZoom = newZoom;
+  applyTreeTransform();
+}
+
+function zoomTreeOut() {
+  const viewport = document.getElementById('treeViewport');
+  const cx = viewport ? viewport.clientWidth / 2 : 400;
+  const cy = viewport ? viewport.clientHeight / 2 : 300;
+  const newZoom = Math.max(0.2, treeZoom * 0.8);
+  treePanX = cx - (cx - treePanX) * (newZoom / treeZoom);
+  treePanY = cy - (cy - treePanY) * (newZoom / treeZoom);
+  treeZoom = newZoom;
+  applyTreeTransform();
+}
+
+function resetTreeViewport() {
+  const viewport = document.getElementById('treeViewport');
+  const vHeight = viewport ? viewport.clientHeight : 640;
+  treeZoom = window.innerWidth < 768 ? 0.6 : 0.82;
+  treePanX = window.innerWidth < 768 ? 20 : 60;
+  treePanY = Math.max(20, (vHeight - 140) / 2);
+  applyTreeTransform();
+}
+
+function centerTreeOnNode(node) {
+  const viewport = document.getElementById('treeViewport');
+  const vHeight = viewport ? viewport.clientHeight : 640;
+  treeZoom = window.innerWidth < 768 ? 0.65 : 0.85;
+  treePanX = 60;
+  treePanY = Math.max(20, vHeight / 2 - (node.y + 45) * treeZoom);
+  applyTreeTransform();
+}
+
+function toggleTreeFullscreen() {
+  const wrapper = document.getElementById('treeViewportWrapper');
+  if (!wrapper) return;
+  if (!document.fullscreenElement) {
+    if (wrapper.requestFullscreen) wrapper.requestFullscreen();
+    else if (wrapper.webkitRequestFullscreen) wrapper.webkitRequestFullscreen();
+  } else {
+    if (document.exitFullscreen) document.exitFullscreen();
+    else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+  }
+}
+
+// Tree quick search and jump
+function handleTreeSearch(query) {
+  const dropdown = document.getElementById('treeSearchDropdown');
+  const clearBtn = document.getElementById('treeSearchClearBtn');
+  if (!dropdown) return;
+  const q = query.trim().toLowerCase();
+
+  if (clearBtn) {
+    if (q.length > 0) clearBtn.classList.add('visible');
+    else clearBtn.classList.remove('visible');
+  }
+
+  if (q.length < 2) {
+    dropdown.style.display = 'none';
+    dropdown.innerHTML = '';
+    return;
+  }
+
+  const matches = [];
+  for (const id in people) {
+    const p = people[id];
+    if (p.n && p.n.toLowerCase().includes(q)) {
+      matches.push(p);
+      if (matches.length >= 8) break;
     }
   }
 
-  rowHtml += `</div></div>`;
-
-  if (nextGenParents.length > 0 && level < 3) {
-    rowHtml += renderTreeNodeLevel(nextGenParents, level + 1);
+  if (matches.length === 0) {
+    dropdown.innerHTML = `<div style="padding:10px 14px; color:var(--text-muted); font-size:0.8rem;">No ancestors found matching "${escapeHtml(q)}".</div>`;
+    dropdown.style.display = 'block';
+    return;
   }
 
-  return rowHtml;
+  let html = '';
+  matches.forEach(p => {
+    const isJerome = (p.s === 'jerome');
+    const badge = isJerome ? '⚜️ Jerome' : '🌸 Amy';
+    const rel = getPersonRelationship(p);
+    html += `
+      <div class="tree-search-item" onclick="selectTreeSearchMatch('${p.id}')">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:2px;">
+          <strong style="color:#fff; font-size:0.88rem;">${escapeHtml(p.n)}</strong>
+          <span style="font-size:0.68rem; color:${isJerome ? 'var(--accent-gold)' : '#fb7185'};">${badge}</span>
+        </div>
+        <div style="font-size:0.74rem; color:var(--text-secondary);">
+          ${escapeHtml(p.b ? p.b.slice(0, 10) : '—')} – ${escapeHtml(p.d ? p.d.slice(0, 10) : '—')} • <span style="color:var(--accent-gold-light);">${escapeHtml(rel)}</span>
+        </div>
+      </div>
+    `;
+  });
+
+  dropdown.innerHTML = html;
+  dropdown.style.display = 'block';
+}
+
+function selectTreeSearchMatch(personId) {
+  clearTreeSearch();
+  focusTreeOnPerson(personId);
+}
+
+function clearTreeSearch() {
+  const input = document.getElementById('treeSearchInput');
+  const dropdown = document.getElementById('treeSearchDropdown');
+  const clearBtn = document.getElementById('treeSearchClearBtn');
+  if (input) input.value = '';
+  if (dropdown) {
+    dropdown.style.display = 'none';
+    dropdown.innerHTML = '';
+  }
+  if (clearBtn) clearBtn.classList.remove('visible');
 }
 
 // ================= WAR STORIES =================
@@ -571,10 +1020,21 @@ function renderImmigrationTimeline() {
   }).join('');
 }
 
+let currentModalPersonId = null;
+
+function openPersonOnTree() {
+  if (!currentModalPersonId) return;
+  const targetId = currentModalPersonId;
+  closeModal();
+  switchTab('tree');
+  focusTreeOnPerson(targetId);
+}
+
 // ================= MODAL / BOTTOM SHEET =================
 function openPersonModal(pid) {
   const p = people[pid];
   if (!p) return;
+  currentModalPersonId = pid;
 
   const modal = document.getElementById('personModal');
   const badge = document.getElementById('modalSideBadge');

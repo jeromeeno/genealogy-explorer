@@ -10,7 +10,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Eno Heritage">
   <link rel="manifest" href="manifest.json">
-  <link rel="stylesheet" href="styles.css?v=2.1">
+  <link rel="stylesheet" href="styles.css?v=2.2">
 </head>
 <body>
 
@@ -142,14 +142,81 @@
 
       <!-- ================= VIEW 2: INTERACTIVE TREE ================= -->
       <section id="view-tree" class="view-section">
-        <div class="tree-controls">
-          <button class="tree-root-btn active" id="btnRootJerome" onclick="setTreeRoot('jerome')">Jerome Eno Line</button>
-          <button class="tree-root-btn" id="btnRootAmy" onclick="setTreeRoot('amy')">Amy Whisenhunt Line</button>
-          <button class="tree-root-btn" id="btnRootFounders" onclick="setTreeRoot('founders')">⛵ 1600s Founders</button>
+        <!-- Tree Header & Primary Switchers -->
+        <div class="tree-header-bar">
+          <div class="tree-root-tabs">
+            <button class="tree-root-btn active" id="btnRootJerome" onclick="setTreeRoot('jerome')">
+              <span>⚜️ Jerome's Pedigree</span>
+              <small>Quebec & Acadia Lines</small>
+            </button>
+            <button class="tree-root-btn" id="btnRootAmy" onclick="setTreeRoot('amy')">
+              <span>🌸 Amy's Pedigree</span>
+              <small>Colombia & American Frontier</small>
+            </button>
+            <button class="tree-root-btn" id="btnRootFounders" onclick="setTreeRoot('founders')">
+              <span>⛵ 1600s Founders</span>
+              <small>Colonial Transatlantic Progenitors</small>
+            </button>
+          </div>
+
+          <!-- Tree Quick Search & Jump -->
+          <div class="tree-search-wrap">
+            <div class="tree-search-input-box">
+              <svg class="search-icon-svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="11" cy="11" r="8"></circle>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+              </svg>
+              <input type="text" id="treeSearchInput" class="search-input" placeholder="Search & jump to any ancestor..." oninput="handleTreeSearch(this.value)">
+              <button id="treeSearchClearBtn" class="search-clear-btn" onclick="clearTreeSearch()">✕</button>
+            </div>
+            <div id="treeSearchDropdown" class="tree-search-dropdown" style="display:none;"></div>
+          </div>
         </div>
 
-        <div class="tree-canvas-wrap" id="treeCanvas">
-          <!-- Tree hierarchy rendered dynamically -->
+        <!-- Breadcrumb trail & Generations Depth Selector Bar -->
+        <div class="tree-toolbar-sub" id="treeToolbarSub">
+          <div class="tree-breadcrumbs" id="treeBreadcrumbs">
+            <!-- Breadcrumbs rendered dynamically -->
+          </div>
+
+          <div class="tree-depth-controls">
+            <span class="depth-label">Generations:</span>
+            <div class="depth-btn-group">
+              <button class="depth-chip" data-depth="3" onclick="setTreeMaxDepth(3, this)">3</button>
+              <button class="depth-chip active" data-depth="4" onclick="setTreeMaxDepth(4, this)">4</button>
+              <button class="depth-chip" data-depth="5" onclick="setTreeMaxDepth(5, this)">5</button>
+              <button class="depth-chip" data-depth="6" onclick="setTreeMaxDepth(6, this)">6</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Interactive Pan & Zoom Tree Viewport -->
+        <div id="treeViewportWrapper" class="tree-viewport-container">
+          <div id="treeViewport" class="tree-viewport">
+            <div id="treeStage" class="tree-stage">
+              <svg id="treeSvg" class="tree-svg-layer"></svg>
+              <div id="treeNodes" class="tree-nodes-layer"></div>
+            </div>
+          </div>
+
+          <!-- Floating HUD: Zoom & View Controls -->
+          <div class="tree-floating-hud">
+            <button class="hud-btn" onclick="zoomTreeIn()" title="Zoom In (+)">＋</button>
+            <div class="hud-zoom-display" id="hudZoomDisplay">100%</div>
+            <button class="hud-btn" onclick="zoomTreeOut()" title="Zoom Out (−)">−</button>
+            <button class="hud-btn" onclick="resetTreeViewport()" title="Center & Reset View">⊙</button>
+            <button class="hud-btn" id="btnTreeFullscreen" onclick="toggleTreeFullscreen()" title="Toggle Fullscreen Tree">⛶</button>
+          </div>
+
+          <!-- Floating Canvas Controls Hint -->
+          <div class="tree-canvas-hint">
+            <span>🖱️ Drag to pan • Scroll / Pinch to zoom • Tap card for details • 🎯 to explore branch</span>
+          </div>
+        </div>
+
+        <!-- Founders Grid (Displayed only when Founders root selected) -->
+        <div id="foundersViewWrap" style="display:none; margin-top:14px;">
+          <!-- Founders cards rendered dynamically -->
         </div>
       </section>
 
@@ -480,6 +547,9 @@
       </div>
 
       <div style="margin-top: 10px; display:flex; flex-direction:column; gap:8px;">
+        <button class="btn-geo-action" onclick="openPersonOnTree()" style="background:rgba(245,158,11,0.12); border-color:var(--accent-gold); color:var(--accent-gold-light);">
+          🌲 View in Family Tree
+        </button>
         <a id="modalFsLink" href="#" target="_blank" class="btn-primary">
           <span>View on FamilySearch ↗</span>
         </a>
@@ -487,8 +557,8 @@
     </div>
   </div>
 
-  <script src="data.js?v=2.1"></script>
-  <script src="app.js?v=2.1"></script>
+  <script src="data.js?v=2.2"></script>
+  <script src="app.js?v=2.2"></script>
   <!-- Google Maps JavaScript API with Restricted Key -->
   <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAUp0G9CWriOIAzBiQfTrNG0_k4ScxFFUw&callback=initGoogleMap&loading=async"></script>
 </body>
