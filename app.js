@@ -1538,7 +1538,7 @@ function showMapLocationCard(loc) {
   const isAmy = loc.side === 'amy';
   const isBoth = loc.side === 'both';
   if (sideBadge) {
-    sideBadge.textContent = isBoth ? '👑 Both Lines' : (isAmy ? '🌸 Amy\'s Line' : '⚜️ Jerome\'s Line');
+    sideBadge.textContent = isBoth ? '🏛️ Shared Town (Both Families Lived Here)' : (isAmy ? '🌸 Amy\'s Line' : '⚜️ Jerome\'s Line');
     sideBadge.className = isBoth ? 'tag-pill tag-both' : (isAmy ? 'tag-pill tag-amy' : 'tag-pill tag-jerome');
   }
 
@@ -1926,7 +1926,7 @@ function renderMasterTimeline() {
   container.innerHTML = visibleEvents.map(ev => {
     const isAmy = ev.s === 'amy';
     const isBoth = ev.s === 'both';
-    const sidePill = isBoth ? '<span class="tag-pill tag-both" style="font-size:0.65rem;">👑 Both Lines</span>' :
+    const sidePill = isBoth ? '<span class="tag-pill tag-both" style="font-size:0.65rem;">🏛️ Shared Location</span>' :
                      (isAmy ? '<span class="tag-pill tag-amy" style="font-size:0.65rem;">🌸 Amy\'s Line</span>' :
                               '<span class="tag-pill tag-jerome" style="font-size:0.65rem;">⚜️ Jerome\'s Line</span>');
 
