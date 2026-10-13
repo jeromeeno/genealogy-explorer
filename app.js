@@ -177,6 +177,18 @@ function executeSearch() {
       const hasG = (p.tags || []).some(t => t.label.includes('Groton'));
       if (!hasG) return false;
     }
+    if (currentFilter === 'antioquia') {
+      const hasAnt = (p.tags || []).some(t => t.label.includes('Antioquia'));
+      if (!hasAnt) return false;
+    }
+    if (currentFilter === 'alabama') {
+      const hasAla = (p.tags || []).some(t => t.label.includes('Clarke'));
+      if (!hasAla) return false;
+    }
+    if (currentFilter === 'swiss') {
+      const hasSwi = (p.tags || []).some(t => t.label.includes('Lauenen'));
+      if (!hasSwi) return false;
+    }
 
     // 2. Text Search Matching
     if (currentSearchTerm) {
@@ -683,14 +695,17 @@ let googleMapInstance = null;
 let mapMarkers = [];
 let mapPolylines = [];
 let mapInitialBounds = null;
+let currentMapLine = 'all';
 let currentMapEra = 'all';
 let currentMapCategory = 'all';
 
 const MAP_LOCATIONS = [
+  // ================= JEROME'S LINE (FRENCH-CANADIAN & ACADIAN) =================
   // --- 17th Century (1600s): French Departure Ports & Provinces ---
   {
     id: 'lisieux',
     title: 'Lisieux, Normandy, France',
+    side: 'jerome',
     category: 'immigration',
     era: '17th',
     coords: { lat: 49.1458, lng: 0.2278 },
@@ -700,6 +715,7 @@ const MAP_LOCATIONS = [
   {
     id: 'paris',
     title: 'Paris, Île-de-France, France',
+    side: 'jerome',
     category: 'immigration',
     era: '17th',
     coords: { lat: 48.8566, lng: 2.3522 },
@@ -709,6 +725,7 @@ const MAP_LOCATIONS = [
   {
     id: 'la-rochelle',
     title: 'La Rochelle, Aunis, France',
+    side: 'jerome',
     category: 'immigration',
     era: '17th',
     coords: { lat: 46.1603, lng: -1.1511 },
@@ -718,6 +735,7 @@ const MAP_LOCATIONS = [
   {
     id: 'perche',
     title: 'Mortagne-au-Perche & Tourouvre, France',
+    side: 'jerome',
     category: 'immigration',
     era: '17th',
     coords: { lat: 48.5206, lng: 0.5456 },
@@ -727,6 +745,7 @@ const MAP_LOCATIONS = [
   {
     id: 'poitou',
     title: 'Martaizé & Poitou, France',
+    side: 'jerome',
     category: 'immigration',
     era: '17th',
     coords: { lat: 46.9172, lng: 0.0617 },
@@ -736,6 +755,7 @@ const MAP_LOCATIONS = [
   {
     id: 'vannes',
     title: 'Vannes & Brittany, France',
+    side: 'jerome',
     category: 'immigration',
     era: '17th',
     coords: { lat: 47.6582, lng: -2.7608 },
@@ -745,6 +765,7 @@ const MAP_LOCATIONS = [
   {
     id: 'dieppe',
     title: 'Dieppe, Normandy, France',
+    side: 'jerome',
     category: 'immigration',
     era: '17th',
     coords: { lat: 49.9246, lng: 1.0775 },
@@ -756,6 +777,7 @@ const MAP_LOCATIONS = [
   {
     id: 'port-royal',
     title: 'Port-Royal, Acadia',
+    side: 'jerome',
     category: 'immigration',
     era: '17th',
     coords: { lat: 44.7431, lng: -65.5172 },
@@ -765,6 +787,7 @@ const MAP_LOCATIONS = [
   {
     id: 'quebec-city',
     title: 'Quebec City & Côte de Beaupré',
+    side: 'jerome',
     category: 'immigration',
     era: '17th',
     coords: { lat: 46.8139, lng: -71.2082 },
@@ -774,6 +797,7 @@ const MAP_LOCATIONS = [
   {
     id: 'cap-rouge',
     title: 'Cap-Rouge, Quebec',
+    side: 'jerome',
     category: 'battle',
     era: '17th',
     coords: { lat: 46.7500, lng: -71.3500 },
@@ -783,6 +807,7 @@ const MAP_LOCATIONS = [
   {
     id: 'berthier',
     title: 'Berthierville & Sorel, Quebec',
+    side: 'jerome',
     category: 'battle',
     era: '17th',
     coords: { lat: 46.0667, lng: -73.1833 },
@@ -792,6 +817,7 @@ const MAP_LOCATIONS = [
   {
     id: 'riviere-ouelle',
     title: 'Rivière-Ouelle, Quebec',
+    side: 'jerome',
     category: 'battle',
     era: '17th',
     coords: { lat: 47.4333, lng: -70.0167 },
@@ -801,6 +827,7 @@ const MAP_LOCATIONS = [
   {
     id: 'castine',
     title: 'Pentagouet (Castine), Maine',
+    side: 'jerome',
     category: 'battle',
     era: '17th',
     coords: { lat: 44.3881, lng: -68.7997 },
@@ -810,6 +837,7 @@ const MAP_LOCATIONS = [
   {
     id: 'pemaquid',
     title: 'Fort William Henry (Pemaquid), Maine',
+    side: 'jerome',
     category: 'battle',
     era: '17th',
     coords: { lat: 43.8797, lng: -69.5250 },
@@ -817,10 +845,11 @@ const MAP_LOCATIONS = [
     people: ['9KDS-BKX']
   },
 
-  // --- 18th Century (1700s): Frontier Raids, Deportation & Revolutions ---
+  // --- 18th Century (1700s): Frontier Raids & Deportation ---
   {
     id: 'groton',
     title: 'Groton, Massachusetts',
+    side: 'jerome',
     category: 'battle',
     era: '18th',
     coords: { lat: 42.6112, lng: -71.5745 },
@@ -830,6 +859,7 @@ const MAP_LOCATIONS = [
   {
     id: 'grand-pre',
     title: 'Grand-Pré & Petitcodiac, Acadia',
+    side: 'jerome',
     category: 'battle',
     era: '18th',
     coords: { lat: 45.1084, lng: -64.3094 },
@@ -837,26 +867,9 @@ const MAP_LOCATIONS = [
     people: ['LW1B-ZMR']
   },
   {
-    id: 'swearingen-fort',
-    title: 'Swearingen\'s Fort (Fayette County, PA)',
-    category: 'battle',
-    era: '18th',
-    coords: { lat: 39.7820, lng: -79.8320 },
-    desc: 'Frontier stockade in Springhill Township built by Captain Van Swearingen ("Indian Van") on the disputed Ohio Valley frontier before serving in the Continental Army.',
-    people: ['LB67-R2J']
-  },
-  {
-    id: 'saratoga',
-    title: 'Saratoga Battlefield, New York',
-    category: 'battle',
-    era: '18th',
-    coords: { lat: 43.0324, lng: -73.5878 },
-    desc: '1777 Saratoga Campaign. Captain Van Swearingen commanded men in Daniel Morgan\'s elite rifle corps before being captured and personally interrogated by British General Simon Fraser.',
-    people: ['LB67-R2J']
-  },
-  {
     id: 'yorktown',
     title: 'Yorktown, Virginia',
+    side: 'jerome',
     category: 'battle',
     era: '18th',
     coords: { lat: 37.2388, lng: -76.5097 },
@@ -868,6 +881,7 @@ const MAP_LOCATIONS = [
   {
     id: 'saint-valentin',
     title: 'Saint-Valentin, Quebec',
+    side: 'jerome',
     category: 'immigration',
     era: '19th',
     coords: { lat: 45.1833, lng: -73.3167 },
@@ -877,6 +891,7 @@ const MAP_LOCATIONS = [
   {
     id: 'rimouski',
     title: 'Kamouraska & Rimouski, Quebec',
+    side: 'jerome',
     category: 'immigration',
     era: '19th',
     coords: { lat: 48.4488, lng: -68.5240 },
@@ -886,6 +901,7 @@ const MAP_LOCATIONS = [
   {
     id: 'lowell',
     title: 'Lowell, Massachusetts',
+    side: 'jerome',
     category: 'immigration',
     era: '19th',
     coords: { lat: 42.6425, lng: -71.3162 },
@@ -895,6 +911,7 @@ const MAP_LOCATIONS = [
   {
     id: 'fallriver',
     title: 'Fall River, Massachusetts',
+    side: 'jerome',
     category: 'cemetery',
     era: '19th',
     coords: { lat: 41.7015, lng: -71.1550 },
@@ -906,18 +923,162 @@ const MAP_LOCATIONS = [
   {
     id: 'saint-ignace',
     title: 'Saint-Ignace, Kent Co., New Brunswick',
+    side: 'jerome',
     category: 'immigration',
     era: '20th',
     coords: { lat: 46.7167, lng: -64.9667 },
     desc: 'The 300-year Acadian homeland of the Caissie and Gallant families, who stayed in the Maritimes until Diane Caissie and father Eugene immigrated to Massachusetts in 1963.',
     people: ['PW92-7TK', 'G3ZY-8HH', 'PW92-ZRG', 'P9GJ-VQK', 'GDQD-SQH']
+  },
+
+  // ================= AMY'S LINE (COLOMBIAN PAISA, SWISS & SOUTHERN FRONTIER) =================
+  {
+    id: 'medellin',
+    title: 'Medellín, Antioquia, Colombia',
+    side: 'amy',
+    category: 'immigration',
+    era: '19th',
+    coords: { lat: 6.2442, lng: -75.5812 },
+    desc: 'The vibrant capital of Antioquia nestled in the Aburrá Valley. The central cultural, commercial, and family center for multiple generations of Quiroz, Hoyos, and Hernández ancestors.',
+    people: ['GX5P-CXK', 'GJW4-THJ', 'GJ8R-26P', 'GJ8T-SKH', 'GJ8R-5LP', 'GJ8R-K2X', 'GVT9-QT3', 'GVT9-WXB']
+  },
+  {
+    id: 'rionegro',
+    title: 'Rionegro & Marinilla, Antioquia, Colombia',
+    side: 'amy',
+    category: 'immigration',
+    era: '17th',
+    coords: { lat: 6.1552, lng: -75.3737 },
+    desc: 'The historic colonial cradle of the Paisa civilization. Mountain valley parishes where 16th and 17th-century Spanish pioneers established estates and founded the Restrepo, López, and Trujillo lines.',
+    people: ['GQTN-T7X', 'LBTV-TXB', 'LDPN-CZ1', 'GQVT-LHQ', 'LR1X-V2H', 'LYCR-RL6', 'GB5B-4DQ', 'GB5B-8PS']
+  },
+  {
+    id: 'santa-fe-antioquia',
+    title: 'Santa Fe de Antioquia, Colombia',
+    side: 'amy',
+    category: 'immigration',
+    era: '17th',
+    coords: { lat: 6.5569, lng: -75.8281 },
+    desc: 'Founded in 1541 by Marshal Jorge Robledo on the banks of the Cauca River. The historic colonial capital of Antioquia during the Spanish Empire.',
+    people: ['GQTN-T7X', 'LYCR-RL6']
+  },
+  {
+    id: 'popayan',
+    title: 'Popayán & Buga, Colombia',
+    side: 'amy',
+    category: 'immigration',
+    era: '17th',
+    coords: { lat: 2.4419, lng: -76.6063 },
+    desc: 'Founded in 1537 by Sebastián de Belalcázar. Historic aristocratic and religious center of southwestern Colombia, home to early Caldas, Grueso, and Segura forebears.',
+    people: ['KCKB-NZL', 'L7HV-M8J', 'LZ2L-MYG', '2Z39-HC4', 'KH3W-VYC', 'KHT1-TW2', '2Z39-4FT', '2Z39-Z65']
+  },
+  {
+    id: 'socorro',
+    title: 'Socorro, Santander, Colombia',
+    side: 'amy',
+    category: 'battle',
+    era: '18th',
+    coords: { lat: 6.4678, lng: -73.2612 },
+    desc: 'Epicenter of the famous 1781 Comuneros Revolt (Rebelión de los Comuneros) where townspeople rose up against Spanish royal taxation, an early spark of South American independence.',
+    people: ['GJW4-THJ', 'GJ8R-26P']
+  },
+  {
+    id: 'grove-hill',
+    title: 'Grove Hill & Clarke County, Alabama',
+    side: 'amy',
+    category: 'cemetery',
+    era: '19th',
+    coords: { lat: 31.7088, lng: -87.7778 },
+    desc: 'The pine belt farmland where Whisenhunt pioneer ancestors cleared homesteads, built churches, and farmed for over a century following their migration south from the Carolinas.',
+    people: ['G3YH-6FX', 'GH23-RT8', 'LBPY-5S2', 'LBGD-HQZ', 'L7J1-94M', 'LHR8-JJJ', 'GQDB-BS4', 'K4NK-L8G']
+  },
+  {
+    id: 'knox-tn',
+    title: 'Knox County, Tennessee',
+    side: 'amy',
+    category: 'immigration',
+    era: '18th',
+    coords: { lat: 35.9606, lng: -83.9207 },
+    desc: 'East Tennessee Appalachian frontier waypoint along the Great Valley road where Whisenhunt and pioneer families gathered before migrating southwest into Alabama.',
+    people: ['K4NK-L8G', 'LBPY-5S2']
+  },
+  {
+    id: 'virginia-colonial',
+    title: 'Henrico & New Kent, Colonial Virginia',
+    side: 'amy',
+    category: 'immigration',
+    era: '17th',
+    coords: { lat: 37.5407, lng: -77.4360 },
+    desc: 'Early 17th-century English colonial settlements along the James River where early planters established tobacco homesteads under the Virginia Company charter.',
+    people: ['PWS6-9H3', 'L1LQ-KVD', 'L1LQ-VYF', 'GS3R-S3B', 'KH7V-F79', 'LCCX-WBX']
+  },
+  {
+    id: 'swearingen-fort',
+    title: 'Swearingen\'s Fort (Fayette County, PA)',
+    side: 'amy',
+    category: 'battle',
+    era: '18th',
+    coords: { lat: 39.7820, lng: -79.8320 },
+    desc: 'Pioneer stockade in Springhill Township built on a 468-acre tract, home to Captain Van Swearingen ("Indian Van") on the contested Ohio Valley frontier before the Revolution.',
+    people: ['LB67-R2J']
+  },
+  {
+    id: 'saratoga',
+    title: 'Saratoga Battlefield, New York',
+    side: 'amy',
+    category: 'battle',
+    era: '18th',
+    coords: { lat: 43.0324, lng: -73.5878 },
+    desc: '1777 Saratoga Campaign. Captain Van Swearingen commanded men in Daniel Morgan\'s elite rifle corps before being captured and personally interrogated by British General Simon Fraser.',
+    people: ['LB67-R2J']
+  },
+  {
+    id: 'stonington',
+    title: 'Stonington, Connecticut Colony',
+    side: 'amy',
+    category: 'immigration',
+    era: '17th',
+    coords: { lat: 41.3437, lng: -71.9056 },
+    desc: '17th-century Puritan maritime settlement on Long Island Sound, founding home of early colonial New England forebears.',
+    people: ['L1LQ-KVD']
+  },
+  {
+    id: 'lauenen',
+    title: 'Lauenen, Bern, Switzerland',
+    side: 'amy',
+    category: 'immigration',
+    era: '17th',
+    coords: { lat: 46.4239, lng: 7.3236 },
+    desc: 'High-altitude alpine parish in the Bernese Oberland of Switzerland, cradle of the Swiss ancestors (Sumi, Haldi, Annen) who later made the transatlantic crossing to America.',
+    people: ['LC7W-N9J', 'LCJ2-YYR', 'GL7K-8H6', 'L71Z-4NJ', 'KV2R-T9R', 'LHDY-GTN', 'G3YJ-C1N', 'KJ6W-ZQH']
+  },
+  {
+    id: 'belton-england',
+    title: 'Belton & Leicestershire, England',
+    side: 'amy',
+    category: 'immigration',
+    era: '17th',
+    coords: { lat: 52.7844, lng: -1.3347 },
+    desc: 'English village in the East Midlands, ancestral home of 17th-century English colonists who sailed across the Atlantic for North America.',
+    people: ['L1LQ-KVD', 'PWS6-9H3']
+  },
+  {
+    id: 'spain-madrid',
+    title: 'Seville & Madrid, Spain',
+    side: 'amy',
+    category: 'immigration',
+    era: '17th',
+    coords: { lat: 40.4168, lng: -3.7038 },
+    desc: 'The Spanish imperial kingdom from whose Atlantic ports galleons set sail for the Viceroyalty of New Granada, carrying the conquistadors and founders of Colombia.',
+    people: ['LYCR-RL6', '2Z39-Z65']
   }
 ];
 
 const MAP_ROUTES = [
-  // 17th Century Transatlantic Crossings (geodesic sailing arcs across the Atlantic)
+  // ================= JEROME'S MIGRATION CORRIDORS =================
   {
     id: 'transatlantic-eno',
+    side: 'jerome',
     era: '17th',
     name: '1665 Jacques Énaud / Le Paix Crossing (Normandy ➔ Quebec)',
     color: '#f59e0b',
@@ -933,6 +1094,7 @@ const MAP_ROUTES = [
   },
   {
     id: 'transatlantic-acadia',
+    side: 'jerome',
     era: '17th',
     name: '1632 & 1665 Acadian Crossing (La Rochelle ➔ Port-Royal)',
     color: '#10b981',
@@ -946,13 +1108,14 @@ const MAP_ROUTES = [
   },
   {
     id: 'transatlantic-cloutier',
+    side: 'jerome',
     era: '17th',
     name: '1634 Percheron Pioneer Crossing (Perche ➔ Quebec)',
     color: '#8b5cf6',
     weight: 2.5,
     path: [
       { lat: 48.5206, lng: 0.5456 },   // Mortagne-au-Perche
-      { lat: 49.4432, lng: 0.1000 },   // Le Havre / St. Malo
+      { lat: 49.4432, lng: 0.1000 },   // Le Havre
       { lat: 49.0, lng: -25.0 },
       { lat: 47.0, lng: -52.0 },
       { lat: 46.8139, lng: -71.2082 }  // Quebec City
@@ -960,9 +1123,10 @@ const MAP_ROUTES = [
   },
   {
     id: 'transatlantic-leroux',
+    side: 'jerome',
     era: '17th',
     name: '1668 Filles du Roi Voyage (Paris ➔ Quebec)',
-    color: '#ec4899',
+    color: '#38bdf8',
     weight: 2.5,
     path: [
       { lat: 48.8566, lng: 2.3522 },   // Paris
@@ -972,10 +1136,9 @@ const MAP_ROUTES = [
       { lat: 46.8139, lng: -71.2082 }  // Quebec City
     ]
   },
-
-  // 18th Century Routes
   {
     id: 'groton-march',
+    side: 'jerome',
     era: '18th',
     name: '1704 Groton Boy Captive March Route (Groton ➔ Montreal)',
     color: '#f59e0b',
@@ -988,22 +1151,8 @@ const MAP_ROUTES = [
     ]
   },
   {
-    id: 'yorktown-march',
-    era: '18th',
-    name: '1781 Hazen\'s Canadian Regiment March (NY ➔ Yorktown)',
-    color: '#38bdf8',
-    weight: 2.5,
-    path: [
-      { lat: 44.9, lng: -73.4 },       // Fort Saint-Jean / Lake Champlain
-      { lat: 41.5, lng: -74.0 },       // Newburgh, NY
-      { lat: 39.95, lng: -75.16 },     // Philadelphia
-      { lat: 37.2388, lng: -76.5097 }  // Yorktown, VA
-    ]
-  },
-
-  // 19th Century Mill Rail Migration Routes
-  {
     id: 'richelieu-lowell',
+    side: 'jerome',
     era: '19th',
     name: '1888 Eno & Lamarre Richelieu Railway Route (Saint-Valentin ➔ Lowell)',
     color: '#38bdf8',
@@ -1017,6 +1166,7 @@ const MAP_ROUTES = [
   },
   {
     id: 'stlawrence-fallriver',
+    side: 'jerome',
     era: '19th',
     name: '1888–1890 Michaud & Normand Textile Route (Kamouraska ➔ Fall River)',
     color: '#8b5cf6',
@@ -1029,10 +1179,9 @@ const MAP_ROUTES = [
       { lat: 41.7015, lng: -71.1550 }  // Fall River, MA
     ]
   },
-
-  // 20th Century Acadian Migration
   {
     id: 'acadian-mass',
+    side: 'jerome',
     era: '20th',
     name: '1963 Caissie Family Acadian Migration (Saint-Ignace ➔ Massachusetts)',
     color: '#10b981',
@@ -1042,6 +1191,84 @@ const MAP_ROUTES = [
       { lat: 45.27, lng: -66.06 },     // Saint John
       { lat: 43.66, lng: -70.25 },     // Portland, ME
       { lat: 42.6425, lng: -71.3162 }  // Lowell, MA
+    ]
+  },
+
+  // ================= AMY'S MIGRATION CORRIDORS =================
+  {
+    id: 'spain-colombia',
+    side: 'amy',
+    era: '17th',
+    name: '16th/17th Century Spanish Atlantic Galleon Voyage (Seville ➔ Colombia)',
+    color: '#f43f5e',
+    weight: 3,
+    path: [
+      { lat: 40.4168, lng: -3.7038 },   // Madrid/Seville, Spain
+      { lat: 36.5298, lng: -6.2924 },   // Cadiz
+      { lat: 28.0, lng: -20.0 },        // Canary Islands trade winds
+      { lat: 18.0, lng: -50.0 },        // Caribbean crossing
+      { lat: 10.3997, lng: -75.5144 },  // Cartagena de Indias
+      { lat: 6.5569, lng: -75.8281 },   // Santa Fe de Antioquia
+      { lat: 6.2442, lng: -75.5812 }    // Medellín / Rionegro
+    ]
+  },
+  {
+    id: 'swiss-america',
+    side: 'amy',
+    era: '18th',
+    name: '18th-Century Swiss Alpine Crossing (Lauenen, Bern ➔ America)',
+    color: '#a855f7',
+    weight: 2.5,
+    path: [
+      { lat: 46.4239, lng: 7.3236 },    // Lauenen, Bern, Switzerland
+      { lat: 49.0, lng: 8.0 },          // Rhine river valley
+      { lat: 51.9, lng: 4.5 },          // Rotterdam port
+      { lat: 45.0, lng: -35.0 },        // Atlantic crossing
+      { lat: 39.9526, lng: -75.1652 }   // Philadelphia / American Colonies
+    ]
+  },
+  {
+    id: 'southern-trail',
+    side: 'amy',
+    era: '19th',
+    name: 'The Great Southern Pioneer Migration (Virginia ➔ Carolinas ➔ TN ➔ Alabama)',
+    color: '#fb923c',
+    weight: 3,
+    path: [
+      { lat: 37.5407, lng: -77.4360 },  // Colonial Virginia (Henrico/New Kent)
+      { lat: 36.1857, lng: -76.4177 },  // Perquimans, NC
+      { lat: 35.9606, lng: -83.9207 },  // Knox County, Tennessee
+      { lat: 33.5, lng: -86.8 },        // Central Alabama
+      { lat: 31.7088, lng: -87.7778 }   // Grove Hill, Clarke County, AL
+    ]
+  },
+  {
+    id: 'swearingen-trail',
+    side: 'amy',
+    era: '18th',
+    name: '1777 Van Swearingen Continental Frontier March (PA ➔ Saratoga)',
+    color: '#ec4899',
+    weight: 2.5,
+    path: [
+      { lat: 39.7820, lng: -79.8320 },  // Swearingen\'s Fort, Fayette Co, PA
+      { lat: 40.0, lng: -77.5 },        // Pennsylvania Ridge & Valley
+      { lat: 41.5, lng: -74.0 },        // Hudson Valley
+      { lat: 43.0324, lng: -73.5878 }   // Saratoga Battlefield, NY
+    ]
+  },
+
+  // ================= THE CONVERGENCE / PAN-AMERICAN UNION =================
+  {
+    id: 'pan-american-union',
+    side: 'both',
+    era: '20th',
+    name: 'The Eno-Whisenhunt Family Heritage Union',
+    color: '#c084fc',
+    weight: 3.5,
+    path: [
+      { lat: 6.2442, lng: -75.5812 },   // Medellín, Colombia
+      { lat: 31.7088, lng: -87.7778 },  // Grove Hill, Alabama
+      { lat: 42.6425, lng: -71.3162 }   // Lowell & Massachusetts
     ]
   }
 ];
@@ -1063,8 +1290,8 @@ function initGoogleMap() {
   ];
 
   googleMapInstance = new google.maps.Map(mapElement, {
-    center: { lat: 46.0, lng: -40.0 },
-    zoom: 4,
+    center: { lat: 28.0, lng: -55.0 },
+    zoom: 3.2,
     styles: darkStyles,
     mapTypeControl: false,
     streetViewControl: false,
@@ -1074,36 +1301,29 @@ function initGoogleMap() {
 
   mapInitialBounds = new google.maps.LatLngBounds();
 
-  // Pin Icons
-  const icons = {
-    battle: {
-      path: "M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z",
-      fillColor: "#f59e0b",
-      fillOpacity: 1,
-      strokeColor: "#ffffff",
-      strokeWeight: 1.5,
-      scale: 1.4,
-      anchor: new google.maps.Point(12, 22)
-    },
-    immigration: {
-      path: "M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z",
-      fillColor: "#10b981",
-      fillOpacity: 1,
-      strokeColor: "#ffffff",
-      strokeWeight: 1.5,
-      scale: 1.4,
-      anchor: new google.maps.Point(12, 22)
-    },
-    cemetery: {
-      path: "M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z",
-      fillColor: "#8b5cf6",
-      fillOpacity: 1,
-      strokeColor: "#ffffff",
-      strokeWeight: 1.5,
-      scale: 1.4,
-      anchor: new google.maps.Point(12, 22)
+  // Distinctive Pin Icons for Jerome vs Amy
+  function getMarkerIcon(loc) {
+    const isAmy = loc.side === 'amy';
+    
+    // Jerome colors: Gold, Emerald, Purple
+    // Amy colors: Rose Coral, Magenta, Cyan
+    let fillColor = isAmy ? '#f43f5e' : '#f59e0b';
+    if (loc.category === 'immigration') {
+      fillColor = isAmy ? '#ec4899' : '#10b981';
+    } else if (loc.category === 'cemetery') {
+      fillColor = isAmy ? '#06b6d4' : '#8b5cf6';
     }
-  };
+
+    return {
+      path: "M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z",
+      fillColor: fillColor,
+      fillOpacity: 1,
+      strokeColor: "#ffffff",
+      strokeWeight: 1.5,
+      scale: 1.4,
+      anchor: new google.maps.Point(12, 22)
+    };
+  }
 
   // Add Markers
   MAP_LOCATIONS.forEach(loc => {
@@ -1114,14 +1334,14 @@ function initGoogleMap() {
       position: latLng,
       map: googleMapInstance,
       title: loc.title,
-      icon: icons[loc.category] || icons.immigration
+      icon: getMarkerIcon(loc)
     });
 
     marker.addListener('click', () => {
       showMapLocationCard(loc);
     });
 
-    mapMarkers.push({ marker, category: loc.category, era: loc.era, loc });
+    mapMarkers.push({ marker, category: loc.category, era: loc.era, side: loc.side, loc });
   });
 
   // Add Routes (Polylines)
@@ -1136,10 +1356,10 @@ function initGoogleMap() {
     });
 
     polyline.addListener('click', () => {
-      focusOnMapLocation(route.path[0].lat, route.path[0].lng, route.name, 6);
+      focusOnMapLocation(route.path[0].lat, route.path[0].lng, route.name, 5);
     });
 
-    mapPolylines.push({ polyline, era: route.era, route });
+    mapPolylines.push({ polyline, era: route.era, side: route.side, route });
   });
 
   googleMapInstance.fitBounds(mapInitialBounds);
@@ -1153,11 +1373,14 @@ function showMapLocationCard(loc) {
   const descEl = document.getElementById('mapCardDesc');
   const ancEl = document.getElementById('mapCardAncestors');
 
-  const eraTag = loc.era === '17th' ? '17e SIÈCLE' :
+  const eraTag = loc.era === '16th' ? '16e SIÈCLE' :
+                 loc.era === '17th' ? '17e SIÈCLE' :
                  loc.era === '18th' ? '18e SIÈCLE' :
                  loc.era === '19th' ? '19e SIÈCLE' : '20e SIÈCLE';
 
-  catEl.textContent = `${eraTag} • ${loc.category.toUpperCase()}`;
+  const sideTag = loc.side === 'jerome' ? '⚜️ JEROME\'S LINE' : '🌸 AMY\'S LINE';
+
+  catEl.textContent = `${sideTag} • ${eraTag} • ${loc.category.toUpperCase()}`;
   titleEl.textContent = loc.title;
   descEl.textContent = loc.desc;
 
@@ -1175,6 +1398,30 @@ function closeMapCard() {
   document.getElementById('mapLocationCard').style.display = 'none';
 }
 
+function setMapLine(line, el) {
+  currentMapLine = line;
+  document.querySelectorAll('#mapLineSelectorBar .line-chip').forEach(c => c.classList.remove('active'));
+  if (el) el.classList.add('active');
+
+  applyMapFilters();
+
+  // Camera fly-to based on selected family line
+  if (googleMapInstance) {
+    if (line === 'jerome') {
+      googleMapInstance.panTo({ lat: 46.5, lng: -55.0 });
+      googleMapInstance.setZoom(4.2);
+    } else if (line === 'amy') {
+      googleMapInstance.panTo({ lat: 24.0, lng: -65.0 });
+      googleMapInstance.setZoom(3.6);
+    } else {
+      googleMapInstance.panTo({ lat: 28.0, lng: -50.0 });
+      googleMapInstance.setZoom(3.2);
+    }
+  }
+
+  renderMapEraTimeline(currentMapEra);
+}
+
 function setMapEra(era, el) {
   currentMapEra = era;
   document.querySelectorAll('#eraFilterBar .era-chip').forEach(c => c.classList.remove('active'));
@@ -1185,17 +1432,22 @@ function setMapEra(era, el) {
   // Smooth camera fly-to based on era
   if (googleMapInstance) {
     if (era === '17th') {
-      googleMapInstance.panTo({ lat: 48.0, lng: -38.0 });
-      googleMapInstance.setZoom(4);
+      googleMapInstance.panTo({ lat: 38.0, lng: -45.0 });
+      googleMapInstance.setZoom(3.5);
     } else if (era === '18th') {
-      googleMapInstance.panTo({ lat: 42.5, lng: -73.5 });
-      googleMapInstance.setZoom(6);
+      googleMapInstance.panTo({ lat: 38.5, lng: -76.0 });
+      googleMapInstance.setZoom(5.5);
     } else if (era === '19th') {
-      googleMapInstance.panTo({ lat: 44.0, lng: -72.0 });
-      googleMapInstance.setZoom(7);
+      if (currentMapLine === 'amy') {
+        googleMapInstance.panTo({ lat: 20.0, lng: -82.0 });
+        googleMapInstance.setZoom(4.5);
+      } else {
+        googleMapInstance.panTo({ lat: 43.8, lng: -72.0 });
+        googleMapInstance.setZoom(6.8);
+      }
     } else if (era === '20th') {
       googleMapInstance.panTo({ lat: 44.8, lng: -67.5 });
-      googleMapInstance.setZoom(6);
+      googleMapInstance.setZoom(5.8);
     } else {
       if (mapInitialBounds) googleMapInstance.fitBounds(mapInitialBounds);
     }
@@ -1214,9 +1466,11 @@ function setMapFilter(cat, el) {
 
 function applyMapFilters() {
   mapMarkers.forEach(m => {
+    const lineMatch = currentMapLine === 'all' || m.side === currentMapLine;
     const eraMatch = currentMapEra === 'all' || m.era === currentMapEra;
     const catMatch = currentMapCategory === 'all' || m.category === currentMapCategory;
-    if (eraMatch && catMatch) {
+    
+    if (lineMatch && eraMatch && catMatch) {
       m.marker.setMap(googleMapInstance);
     } else {
       m.marker.setMap(null);
@@ -1224,8 +1478,10 @@ function applyMapFilters() {
   });
 
   mapPolylines.forEach(p => {
+    const lineMatch = currentMapLine === 'all' || p.side === 'both' || p.side === currentMapLine;
     const eraMatch = currentMapEra === 'all' || p.era === currentMapEra;
-    if (eraMatch) {
+    
+    if (lineMatch && eraMatch) {
       p.polyline.setMap(googleMapInstance);
     } else {
       p.polyline.setMap(null);
@@ -1239,16 +1495,25 @@ function renderMapEraTimeline(era) {
   const title = document.getElementById('eraTimelineTitle');
   if (!container) return;
 
-  const filteredLocs = MAP_LOCATIONS.filter(l => era === 'all' || l.era === era);
+  const filteredLocs = MAP_LOCATIONS.filter(l => {
+    const lineMatch = currentMapLine === 'all' || l.side === currentMapLine;
+    const eraMatch = era === 'all' || l.era === era;
+    return lineMatch && eraMatch;
+  });
+
   if (badge) badge.textContent = `${filteredLocs.length} Historical Sites`;
+  
   if (title) {
-    title.textContent = era === '17th' ? '17e Siècle Atlantic Chronicles' :
-                       era === '18th' ? '18e Siècle Frontier & Battles' :
-                       era === '19th' ? '19e Siècle Mill Migration' :
-                       era === '20th' ? '20e Siècle Modern Heritage' : 'Historical Migration Sites';
+    const linePrefix = currentMapLine === 'jerome' ? '⚜️ Jerome\'s Line' :
+                       currentMapLine === 'amy' ? '🌸 Amy\'s Line' : '👑 Both Family Lines';
+    title.textContent = `${linePrefix} • Historical Chronicles`;
   }
 
   container.innerHTML = filteredLocs.map(loc => {
+    const isAmy = loc.side === 'amy';
+    const sidePill = isAmy ? '<span class="tag-pill tag-amy" style="font-size:0.65rem;">🌸 Amy\'s Line</span>' :
+                             '<span class="tag-pill tag-jerome" style="font-size:0.65rem;">⚜️ Jerome\'s Line</span>';
+
     const peoplePills = (loc.people || []).map(pid => {
       const p = people[pid];
       const pName = p ? p.n : pid;
@@ -1258,7 +1523,10 @@ function renderMapEraTimeline(era) {
     return `
       <div class="era-timeline-card" onclick="focusOnMapLocation(${loc.coords.lat}, ${loc.coords.lng}, '${escapeHtml(loc.title)}')">
         <div class="era-timeline-card-header">
-          <span class="story-conflict" style="font-size:0.68rem;">${escapeHtml(loc.category.toUpperCase())}</span>
+          <div style="display:flex; align-items:center; gap:6px;">
+            ${sidePill}
+            <span class="story-conflict" style="font-size:0.68rem;">${escapeHtml(loc.category.toUpperCase())}</span>
+          </div>
           <span style="font-size:0.75rem; color:var(--accent-gold); font-weight:700;">📍 Focus Map</span>
         </div>
         <div class="era-timeline-card-title">${escapeHtml(loc.title)}</div>
@@ -1280,7 +1548,7 @@ function focusOnMapLocation(lat, lng, title, zoom = 9) {
   }
 
   const matched = MAP_LOCATIONS.find(l => 
-    Math.abs(l.coords.lat - lat) < 0.05 && Math.abs(l.coords.lng - lng) < 0.05
+    Math.abs(l.coords.lat - lat) < 0.08 && Math.abs(l.coords.lng - lng) < 0.08
   );
 
   if (matched) {

@@ -1113,4 +1113,101 @@ body {
   white-space: nowrap;
 }
 
+/* ---------------- Line / Branch Selector ---------------- */
+.line-selector-bar {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 2px 2px 8px 2px;
+  margin-bottom: 8px;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.line-selector-bar::-webkit-scrollbar {
+  display: none;
+}
+
+.line-chip {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+  text-align: left;
+}
+
+.line-chip:active {
+  transform: scale(0.97);
+}
+
+.line-chip .line-icon {
+  font-size: 1.35rem;
+}
+
+.line-chip .line-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.line-chip .line-text span {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #cbd5e1;
+  line-height: 1.2;
+}
+
+.line-chip .line-text small {
+  font-size: 0.68rem;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+/* All Lines (Royal Purple) */
+.line-chip#chipLineAll.active {
+  background: linear-gradient(135deg, rgba(168, 85, 247, 0.18), rgba(168, 85, 247, 0.06));
+  border-color: var(--accent-purple);
+  box-shadow: 0 0 16px rgba(168, 85, 247, 0.25);
+}
+.line-chip#chipLineAll.active .line-text span {
+  color: #fff;
+}
+.line-chip#chipLineAll.active .line-text small {
+  color: #c084fc;
+}
+
+/* Jerome Line (Gold) */
+.line-chip.line-jerome.active {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.18), rgba(245, 158, 11, 0.06));
+  border-color: var(--accent-gold);
+  box-shadow: 0 0 16px rgba(245, 158, 11, 0.25);
+}
+.line-chip.line-jerome.active .line-text span {
+  color: #fff;
+}
+.line-chip.line-jerome.active .line-text small {
+  color: var(--accent-gold-light);
+}
+
+/* Amy Line (Rose Coral) */
+.line-chip.line-amy.active {
+  background: linear-gradient(135deg, rgba(244, 63, 94, 0.18), rgba(244, 63, 94, 0.06));
+  border-color: #f43f5e;
+  box-shadow: 0 0 16px rgba(244, 63, 94, 0.25);
+}
+.line-chip.line-amy.active .line-text span {
+  color: #fff;
+}
+.line-chip.line-amy.active .line-text small {
+  color: #fb7185;
+}
+
+
 

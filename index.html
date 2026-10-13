@@ -87,13 +87,16 @@
 
         <div class="filter-chips-wrap">
           <button class="chip active" onclick="setFilter('all', this)">All (4,631)</button>
-          <button class="chip" onclick="setFilter('jerome', this)">Jerome's Line</button>
-          <button class="chip" onclick="setFilter('amy', this)">Amy's Line</button>
+          <button class="chip" onclick="setFilter('jerome', this)">⚜️ Jerome's Line (3,374)</button>
+          <button class="chip" onclick="setFilter('amy', this)">🌸 Amy's Line (1,257)</button>
           <button class="chip" onclick="setFilter('war', this)">🎖️ War Heroes</button>
           <button class="chip" onclick="setFilter('immigrant', this)">🚢 Immigrants</button>
+          <button class="chip" onclick="setFilter('antioquia', this)">🇨🇴 Antioquia, Colombia</button>
+          <button class="chip" onclick="setFilter('alabama', this)">🇺🇸 Clarke Co., AL</button>
           <button class="chip" onclick="setFilter('fallriver', this)">Fall River, MA</button>
           <button class="chip" onclick="setFilter('lowell', this)">Lowell, MA</button>
           <button class="chip" onclick="setFilter('groton', this)">Groton, MA</button>
+          <button class="chip" onclick="setFilter('swiss', this)">🇨🇭 Switzerland</button>
         </div>
 
         <div class="results-meta">
@@ -128,31 +131,47 @@
         <div style="margin-bottom: 14px;">
           <h2 style="font-size: 1.3rem; font-weight:800; color:#fff;">Ancestral Geography & Migration Map</h2>
           <p style="font-size: 0.85rem; color: var(--text-secondary); margin-top:4px;">
-            Explore the historical settlements, battlegrounds, and migration corridors connecting 17th-century France, Acadia, New France, and Massachusetts.
+            Explore the historical settlements, battlegrounds, and migration corridors of both Jerome's and Amy's lines across New France, Acadia, Colombia, the American Frontier, Switzerland, France, and Spain.
           </p>
+        </div>
+
+        <!-- Line / Branch Selector (Both Sides) -->
+        <div class="line-selector-bar" id="mapLineSelectorBar">
+          <button class="line-chip active" id="chipLineAll" onclick="setMapLine('all', this)">
+            <span class="line-icon">👑</span>
+            <div class="line-text"><span>Both Lines</span><small>All 4,631 Ancestors</small></div>
+          </button>
+          <button class="line-chip line-jerome" id="chipLineJerome" onclick="setMapLine('jerome', this)">
+            <span class="line-icon">⚜️</span>
+            <div class="line-text"><span>Jerome's Line</span><small>Canada, Acadia, France</small></div>
+          </button>
+          <button class="line-chip line-amy" id="chipLineAmy" onclick="setMapLine('amy', this)">
+            <span class="line-icon">🌸</span>
+            <div class="line-text"><span>Amy's Line</span><small>Colombia, South US, Swiss</small></div>
+          </button>
         </div>
 
         <!-- Century / Era Horizontal Carousel -->
         <div class="era-filter-bar" id="eraFilterBar">
           <button class="era-chip active" onclick="setMapEra('all', this)">
             <span class="era-icon">🌐</span>
-            <div class="era-text"><span>All Eras</span><small>1600–Present</small></div>
+            <div class="era-text"><span>All Eras</span><small>1500–Present</small></div>
           </button>
           <button class="era-chip" onclick="setMapEra('17th', this)">
             <span class="era-icon">⛵</span>
-            <div class="era-text"><span>17e Siècle</span><small>1600s Crossing</small></div>
+            <div class="era-text"><span>16e–17e Siècle</span><small>Colonial Crossings</small></div>
           </button>
           <button class="era-chip" onclick="setMapEra('18th', this)">
             <span class="era-icon">⚔️</span>
-            <div class="era-text"><span>18e Siècle</span><small>1700s Frontier</small></div>
+            <div class="era-text"><span>18e Siècle</span><small>Frontier & Revolutions</small></div>
           </button>
           <button class="era-chip" onclick="setMapEra('19th', this)">
             <span class="era-icon">🏭</span>
-            <div class="era-text"><span>19e Siècle</span><small>1800s Mills</small></div>
+            <div class="era-text"><span>19e Siècle</span><small>Pioneer Migrations</small></div>
           </button>
           <button class="era-chip" onclick="setMapEra('20th', this)">
             <span class="era-icon">🍁</span>
-            <div class="era-text"><span>20e Siècle</span><small>1900s Acadian</small></div>
+            <div class="era-text"><span>20e Siècle</span><small>Modern Arrivals</small></div>
           </button>
         </div>
 
@@ -160,7 +179,7 @@
           <button class="chip active" onclick="setMapFilter('all', this)">All Types</button>
           <button class="chip" onclick="setMapFilter('immigration', this)">🚢 Migrations & Towns</button>
           <button class="chip" onclick="setMapFilter('battle', this)">🎖️ Battles & Forts</button>
-          <button class="chip" onclick="setMapFilter('cemetery', this)">⛪ Cemeteries</button>
+          <button class="chip" onclick="setMapFilter('cemetery', this)">⛪ Cemeteries & Missions</button>
         </div>
 
         <div id="googleMap" class="map-frame"></div>
