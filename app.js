@@ -273,16 +273,24 @@ function getPersonRelationship(p) {
   if (p.rel) return p.rel;
   if (p.id === 'PW92-F2S') return 'Jerome Eno (You)';
   if (p.id === 'PW92-6SQ') return 'Amy Whisenhunt (Wife)';
+  if (p.s !== 'jerome' && p.s !== 'amy' || p.gen === null || p.gen === undefined) return 'Historical Profile';
   const target = p.s === 'jerome' ? 'Jerome' : 'Amy';
   const isF = (p.g === 'F');
   const gen = p.gen;
   if (gen === 1) return isF ? `Mother of ${target}` : `Father of ${target}`;
   if (gen === 2) return isF ? `Grandmother of ${target}` : `Grandfather of ${target}`;
   if (gen === 3) return isF ? `Great-grandmother of ${target}` : `Great-grandfather of ${target}`;
-  if (gen !== null && gen !== undefined && gen >= 4) {
+  if (gen >= 4) {
     const k = gen - 2;
     const suffix = (10 <= k % 100 && k % 100 <= 20) ? 'th' : ({1: 'st', 2: 'nd', 3: 'rd'}[k % 10] || 'th');
     const role = isF ? 'great-grandmother' : 'great-grandfather';
+    if (p.lines && p.lines > 1 && p.min_gen !== null && p.max_gen !== null && p.min_gen !== p.max_gen) {
+      const kMin = p.min_gen - 2;
+      const kMax = p.max_gen - 2;
+      const sMin = (10 <= kMin % 100 && kMin % 100 <= 20) ? 'th' : ({1: 'st', 2: 'nd', 3: 'rd'}[kMin % 10] || 'th');
+      const sMax = (10 <= kMax % 100 && kMax % 100 <= 20) ? 'th' : ({1: 'st', 2: 'nd', 3: 'rd'}[kMax % 10] || 'th');
+      return `${k}${suffix} ${role} of ${target} (${kMin}${sMin}–${kMax}${sMax} across ${p.lines} lines)`;
+    }
     return `${k}${suffix} ${role} of ${target}`;
   }
   return `Ancestor of ${target}`;
@@ -304,13 +312,14 @@ function getPersonOrigin(p) {
 function createPersonCardHtml(p) {
   const isJerome = p.s === 'jerome';
   const sideClass = isJerome ? 'badge-jerome' : (p.s === 'amy' ? 'badge-amy' : '');
-  const sideLabel = isJerome ? "Jerome's Line" : (p.s === 'amy' ? "Amy's Line" : "Relative");
+  const sideLabel = isJerome ? "Jerome's Line" : (p.s === 'amy' ? "Amy's Line" : "Historical Record");
   const relText = getPersonRelationship(p);
-  const relClass = isJerome ? 'card-relation-jerome' : 'card-relation-amy';
-  const sideIcon = isJerome ? '⚜️' : '🌸';
+  const relClass = isJerome ? 'card-relation-jerome' : (p.s === 'amy' ? 'card-relation-amy' : '');
+  const sideIcon = isJerome ? '⚜️' : (p.s === 'amy' ? '🌸' : '📜');
   const originText = getPersonOrigin(p);
 
   const genBadge = p.gen !== null && p.gen !== undefined ? `Gen ${p.gen}` : '';
+  const linesBadge = (p.lines && p.lines > 1) ? ` • ${p.lines.toLocaleString()} lines` : '';
 
   const tagsHtml = (p.tags || []).map(t => {
     let tClass = 'tag-loc';
@@ -328,7 +337,7 @@ function createPersonCardHtml(p) {
             <span>${sideIcon}</span> <span>${escapeHtml(relText)}</span>
           </div>
         </div>
-        <span class="badge-side ${sideClass}">${sideLabel} ${genBadge ? '• ' + genBadge : ''}</span>
+        <span class="badge-side ${sideClass}">${sideLabel} ${genBadge ? '• ' + genBadge : ''}${linesBadge}</span>
       </div>
       <div class="card-origin-line" title="${escapeHtml(originText)}">
         <span class="origin-pin">📍</span>
@@ -620,7 +629,7 @@ function renderTreeNodeCard(node) {
          style="left:${node.x}px; top:${node.y}px;"
          onclick="openPersonModal('${p.id}')">
       <div class="tree-card-top-row">
-        <span class="tree-card-rel ${relClass}">${escapeHtml(relStr)}</span>
+        <span class="tree-card-rel ${relClass}" title="${escapeHtml(relStr)}">${escapeHtml(relStr)}</span>
         <span class="tree-card-gender">${genderIcon}</span>
       </div>
       <div class="tree-card-name" title="${escapeHtml(p.n)}">${escapeHtml(p.n)}</div>
@@ -1056,13 +1065,27 @@ function openPersonModal(pid) {
   currentModalGeo = p.geo;
   currentModalSide = p.s;
 
-  badge.className = 'badge-side ' + (isJerome ? 'badge-jerome' : 'badge-amy');
-  badge.textContent = isJerome ? "Jerome's Line" : "Amy's Line";
+  badge.className = 'badge-side ' + (isJerome ? 'badge-jerome' : (p.s === 'amy' ? 'badge-amy' : ''));
+  badge.textContent = isJerome ? "Jerome's Line" : (p.s === 'amy' ? "Amy's Line" : "Historical Record");
 
   const relEl = document.getElementById('modalRelation');
   if (relEl) {
-    relEl.className = 'modal-relation-banner ' + (isJerome ? 'banner-jerome' : 'banner-amy');
-    relEl.innerHTML = `<span>${isJerome ? '⚜️' : '🌸'}</span> <span>${escapeHtml(relText)}</span>`;
+    relEl.className = 'modal-relation-banner ' + (isJerome ? 'banner-jerome' : (p.s === 'amy' ? 'banner-amy' : ''));
+    relEl.innerHTML = `<span>${isJerome ? '⚜️' : (p.s === 'amy' ? '🌸' : '📜')}</span> <span>${escapeHtml(relText)}</span>`;
+  }
+
+  const collapseEl = document.getElementById('modalPedigreeCollapse');
+  if (collapseEl) {
+    if (p.lines && p.lines > 1 && p.min_gen !== null && p.max_gen !== null && p.min_gen !== p.max_gen) {
+      collapseEl.style.display = 'inline-block';
+      const kMin = p.min_gen - 2;
+      const kMax = p.max_gen - 2;
+      const sMin = (10 <= kMin % 100 && kMin % 100 <= 20) ? 'th' : ({1: 'st', 2: 'nd', 3: 'rd'}[kMin % 10] || 'th');
+      const sMax = (10 <= kMax % 100 && kMax % 100 <= 20) ? 'th' : ({1: 'st', 2: 'nd', 3: 'rd'}[kMax % 10] || 'th');
+      collapseEl.innerHTML = `🧬 <strong>Pedigree Collapse:</strong> Inherited across <strong>${p.lines.toLocaleString()}</strong> distinct ancestral lines (Generations ${p.min_gen}–${p.max_gen} • ${kMin}${sMin}–${kMax}${sMax} great-grandparent)`;
+    } else {
+      collapseEl.style.display = 'none';
+    }
   }
 
   const originEl = document.getElementById('modalOrigin');

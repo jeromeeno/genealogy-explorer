@@ -1259,6 +1259,18 @@ body {
   border: 1px solid rgba(244, 63, 94, 0.35);
 }
 
+.modal-pedigree-collapse {
+  margin-top: 6px;
+  font-size: 0.8rem;
+  color: #93c5fd;
+  background: rgba(59, 130, 246, 0.12);
+  border: 1px solid rgba(59, 130, 246, 0.28);
+  padding: 6px 12px;
+  border-radius: var(--radius-md);
+  line-height: 1.4;
+  display: inline-block;
+}
+
 .modal-origin-pill {
   font-size: 0.72rem;
   padding: 2px 8px;
