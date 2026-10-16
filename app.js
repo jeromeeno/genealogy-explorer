@@ -208,7 +208,7 @@ function executeSearch() {
       if (!hasAla) return false;
     }
     if (currentFilter === 'swiss') {
-      const hasSwi = (p.tags || []).some(t => t.label.includes('Lauenen'));
+      const hasSwi = (p.tags || []).some(t => t.label.includes('Switzerland') || t.label.includes('Lauenen'));
       if (!hasSwi) return false;
     }
 
