@@ -1838,17 +1838,17 @@ const MAP_ROUTES = [
     ]
   },
   {
-    id: 'swearingen-trail',
+    id: 'stonington-midatlantic-trail',
     side: 'amy',
     era: '18th',
-    name: '1777 Van Swearingen Continental Frontier March (PA ➔ Saratoga)',
+    name: 'Colonial New England & Mid-Atlantic Migration (Stonington, CT ➔ Monmouth/Gloucester, NJ ➔ Lancaster, PA)',
     color: '#ec4899',
     weight: 2.5,
     path: [
-      { lat: 39.7820, lng: -79.8320 },  // Swearingen\'s Fort, Fayette Co, PA
-      { lat: 40.0, lng: -77.5 },        // Pennsylvania Ridge & Valley
-      { lat: 41.5, lng: -74.0 },        // Hudson Valley
-      { lat: 43.0324, lng: -73.5878 }   // Saratoga Battlefield, NY
+      { lat: 41.3359, lng: -71.9059 },  // Stonington, Connecticut
+      { lat: 40.3907, lng: -74.1154 },  // Middletown, Monmouth Co., NJ
+      { lat: 40.0712, lng: -74.8649 },  // Burlington / Gloucester Co., NJ
+      { lat: 40.0379, lng: -76.3055 }   // Lancaster, Pennsylvania
     ]
   },
 
@@ -1919,7 +1919,7 @@ function initGoogleMap() {
   mapMarkers = [];
   mapPolylines = [];
 
-  // Distinctive Color-Coded Pin Icons
+  // Distinctive Color-Coded Pin Icons (scaled by ancestor count at each town)
   function getMarkerIcon(loc) {
     let fillColor = '#3b82f6'; // Default Jerome Royal Azure
 
@@ -1937,18 +1937,21 @@ function initGoogleMap() {
       else if (loc.category === 'cemetery') fillColor = '#8b5cf6';
     }
 
+    const pCount = (loc.people || []).length;
+    const scale = pCount >= 40 ? 1.5 : (pCount >= 10 ? 1.3 : (pCount >= 3 ? 1.15 : 1.0));
+
     return {
       path: "M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z",
       fillColor: fillColor,
-      fillOpacity: 1,
+      fillOpacity: 0.95,
       strokeColor: "#ffffff",
-      strokeWeight: 1.5,
-      scale: 1.45,
+      strokeWeight: 1.25,
+      scale: scale,
       anchor: new google.maps.Point(12, 22)
     };
   }
 
-  // Add Markers for all hubs
+  // Add Markers for all exact geocoded towns/parishes
   const effectiveHubs = getEffectiveMapHubs();
   effectiveHubs.forEach(loc => {
     const latLng = new google.maps.LatLng(loc.coords.lat, loc.coords.lng);
@@ -1960,11 +1963,13 @@ function initGoogleMap() {
       amyBounds.extend(latLng);
     }
 
+    const pCount = (loc.people || []).length;
     const marker = new google.maps.Marker({
       position: latLng,
       map: googleMapInstance,
-      title: `${loc.title} (${(loc.people || []).length} relatives)`,
-      icon: getMarkerIcon(loc)
+      title: `${loc.title} (${pCount} ${pCount === 1 ? 'ancestor' : 'ancestors'})`,
+      icon: getMarkerIcon(loc),
+      zIndex: (loc.category === 'battle' ? 500 : 0) + pCount
     });
 
     marker.addListener('click', () => {
@@ -2047,11 +2052,9 @@ function showMapLocationCard(loc) {
   if (ancCountEl) ancCountEl.textContent = ancestors.length;
   renderCardAncestors(ancestors);
 
-  // Render Local Events List
+  // Render Local Events List (strictly events that occurred at this exact town/parish!)
   const allEvents = (window.GENEALOGY_DATA && window.GENEALOGY_DATA.timelineEvents) || [];
-  const localEvents = allEvents.filter(ev => {
-    return ev.hid === loc.id || (ev.p && ev.p.some(pid => ancestors.includes(pid)));
-  });
+  const localEvents = allEvents.filter(ev => ev.hid === loc.id);
   if (evtCountEl) evtCountEl.textContent = localEvents.length;
   renderCardEvents(localEvents);
 
@@ -2078,7 +2081,7 @@ function renderCardAncestors(pids, query = '') {
   });
 
   if (filtered.length === 0) {
-    ancEl.innerHTML = `<div style="font-size:0.8rem; color:var(--text-muted); padding:8px 0;">No matching ancestors at this hub.</div>`;
+    ancEl.innerHTML = `<div style="font-size:0.8rem; color:var(--text-muted); padding:8px 0;">No matching ancestors at this location.</div>`;
     return;
   }
 
@@ -2105,7 +2108,7 @@ function renderCardEvents(events) {
   if (!listEl) return;
 
   if (events.length === 0) {
-    listEl.innerHTML = `<div style="font-size:0.8rem; color:var(--text-muted); padding:8px 0;">No chronicle events recorded for this hub.</div>`;
+    listEl.innerHTML = `<div style="font-size:0.8rem; color:var(--text-muted); padding:8px 0;">No chronicle events recorded for this location.</div>`;
     return;
   }
 
@@ -2386,7 +2389,7 @@ function renderMasterTimeline() {
   if (titleEl) {
     const linePrefix = currentMapLine === 'jerome' ? '⚜️ Jerome\'s Line' :
                        currentMapLine === 'amy' ? '🌸 Amy\'s Line' : '👑 Both Family Lines';
-    const hubSuffix = timelineFilterHubId ? ` • Hub: ${escapeHtml(currentSelectedHub ? currentSelectedHub.title : timelineFilterHubId)}` : '';
+    const hubSuffix = timelineFilterHubId ? ` • Location: ${escapeHtml(currentSelectedHub ? currentSelectedHub.title : timelineFilterHubId)}` : '';
     titleEl.textContent = `${linePrefix} • Historical Master Timeline${hubSuffix}`;
   }
 
