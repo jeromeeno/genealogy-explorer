@@ -354,7 +354,12 @@ function createPersonCardHtml(p) {
           <span>${escapeHtml(p.d || '—')} ${p.dp ? '• ' + escapeHtml(p.dp) : ''}</span>
         </div>` : ''}
       </div>
-      ${tagsHtml ? `<div class="card-tags">${tagsHtml}</div>` : ''}
+      <div class="card-footer-actions" style="margin-top:8px; padding-top:6px; border-top:1px solid rgba(255,255,255,0.06); display:flex; justify-content:space-between; align-items:center; gap:8px;">
+        ${tagsHtml ? `<div class="card-tags" style="margin-top:0;">${tagsHtml}</div>` : '<div></div>'}
+        <button class="btn-card-path" onclick="event.stopPropagation(); openConnectionPathModal('${p.id}')" title="Show path to Jerome or Amy">
+          🧭 Show Path
+        </button>
+      </div>
     </div>
   `;
 }
@@ -372,6 +377,9 @@ let isTreePanning = false;
 let treePanStartX = 0;
 let treePanStartY = 0;
 let isTreeEventsBound = false;
+let activeTreePath = null; // Set of person IDs along active tree path
+let activeTreePathSteps = []; // Array of person IDs along active tree path
+let activeTreePathStepIdx = 0;
 
 function setTreeRoot(mode) {
   document.querySelectorAll('.tree-root-btn').forEach(btn => btn.classList.remove('active'));
@@ -465,15 +473,27 @@ function buildTreeLayout(rootId, maxDepth, expandedMap) {
     visited.add(id);
 
     const p = people[id];
-    const isExpanded = expandedMap[id] !== undefined ? expandedMap[id] : (depth < maxDepth);
+    const isPathNode = Boolean(activeTreePath && activeTreePath.has(id));
+    
+    // In active path mode, ensure path nodes are expanded all the way to target
+    let isExpanded;
+    if (activeTreePath) {
+      isExpanded = isPathNode;
+    } else {
+      isExpanded = expandedMap[id] !== undefined ? expandedMap[id] : (depth < maxDepth);
+    }
+
     const parents = (p.p && p.p.length > 0) ? p.p.filter(pid => Boolean(people[pid])) : [];
     const hasParents = parents.length > 0;
 
     let parentNodes = [];
     if (isExpanded && hasParents) {
       for (const parId of parents) {
-        const parNode = processPerson(parId, depth + 1);
-        if (parNode) parentNodes.push(parNode);
+        // If in path mode, prioritize expanding the parent on the active path
+        if (!activeTreePath || activeTreePath.has(parId) || parents.length <= 2) {
+          const parNode = processPerson(parId, depth + 1);
+          if (parNode) parentNodes.push(parNode);
+        }
       }
     }
 
@@ -501,6 +521,7 @@ function buildTreeLayout(rootId, maxDepth, expandedMap) {
       hasParents,
       parentCount: parents.length,
       isJerome,
+      isPath: isPathNode,
       isRoot: (id === rootId)
     };
     nodes.push(node);
@@ -510,6 +531,7 @@ function buildTreeLayout(rootId, maxDepth, expandedMap) {
         childId: id,
         parentId: parNode.id,
         isJerome,
+        isPath: isPathNode && Boolean(activeTreePath && activeTreePath.has(parNode.id)),
         x1: x + nodeWidth,
         y1: y + nodeHeight / 2,
         x2: parNode.x,
@@ -602,6 +624,7 @@ function renderTreeNodeCard(node) {
   const isJerome = node.isJerome;
   const sideClass = isJerome ? 'side-jerome' : 'side-amy';
   const rootClass = node.isRoot ? 'is-root' : '';
+  const pathClass = node.isPath ? 'is-path-node' : '';
   const relStr = getPersonRelationship(p);
   const relClass = isJerome ? '' : 'rel-amy';
   const genderIcon = p.g === 'M' ? '♂' : (p.g === 'F' ? '♀' : '');
@@ -618,6 +641,12 @@ function renderTreeNodeCard(node) {
     `;
   }
 
+  const pathBtnHtml = !node.isRoot ? `
+    <button class="tree-btn-path" onclick="openConnectionPathModal('${p.id}', 0, 'asc', event)" title="Show connection path to Jerome/Amy">
+      🧭 Path
+    </button>
+  ` : '';
+
   const focusBtnHtml = !node.isRoot ? `
     <button class="tree-btn-focus" onclick="focusTreeOnPerson('${p.id}', event)" title="Focus pedigree tree on ${escapeHtml(p.n)}">
       🎯 Focus
@@ -625,7 +654,7 @@ function renderTreeNodeCard(node) {
   ` : `<span style="font-size:0.68rem; font-weight:700; color:var(--accent-gold);">★ Root</span>`;
 
   return `
-    <div class="tree-person-card ${sideClass} ${rootClass}" 
+    <div class="tree-person-card ${sideClass} ${rootClass} ${pathClass}" 
          style="left:${node.x}px; top:${node.y}px;"
          onclick="openPersonModal('${p.id}')">
       <div class="tree-card-top-row">
@@ -638,7 +667,10 @@ function renderTreeNodeCard(node) {
       </div>
       ${origin ? `<div class="tree-card-geo" title="${escapeHtml(origin)}">📍 ${escapeHtml(origin)}</div>` : ''}
       <div class="tree-card-actions-row">
-        ${focusBtnHtml}
+        <div style="display:flex; gap:4px; align-items:center;">
+          ${focusBtnHtml}
+          ${pathBtnHtml}
+        </div>
         ${toggleBtnHtml}
       </div>
     </div>
@@ -653,10 +685,11 @@ function renderTreeSvgLinks(links, totalWidth, totalHeight) {
 
   let pathsHtml = '';
   for (const link of links) {
-    const { x1, y1, x2, y2, isJerome } = link;
+    const { x1, y1, x2, y2, isJerome, isPath } = link;
     const mx = (x1 + x2) / 2;
     const d = `M ${x1} ${y1} C ${mx} ${y1}, ${mx} ${y2}, ${x2} ${y2}`;
-    const cls = isJerome ? 'tree-svg-path' : 'tree-svg-path path-amy';
+    let cls = isJerome ? 'tree-svg-path' : 'tree-svg-path path-amy';
+    if (isPath) cls += ' is-path-link';
     pathsHtml += `<path d="${d}" class="${cls}" />`;
   }
   svg.innerHTML = pathsHtml;
@@ -917,8 +950,13 @@ function handleTreeSearch(query) {
           <strong style="color:#fff; font-size:0.88rem;">${escapeHtml(p.n)}</strong>
           <span style="font-size:0.68rem; color:${isJerome ? 'var(--accent-gold)' : '#fb7185'};">${badge}</span>
         </div>
-        <div style="font-size:0.74rem; color:var(--text-secondary);">
-          ${escapeHtml(p.b ? p.b.slice(0, 10) : '—')} – ${escapeHtml(p.d ? p.d.slice(0, 10) : '—')} • <span style="color:var(--accent-gold-light);">${escapeHtml(rel)}</span>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:3px;">
+          <div style="font-size:0.74rem; color:var(--text-secondary); flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+            ${escapeHtml(p.b ? p.b.slice(0, 10) : '—')} – ${escapeHtml(p.d ? p.d.slice(0, 10) : '—')} • <span style="color:var(--accent-gold-light);">${escapeHtml(rel)}</span>
+          </div>
+          <button class="btn-mini-path" onclick="event.stopPropagation(); clearTreeSearch(); openConnectionPathModal('${p.id}')" title="Show path to Jerome or Amy" style="margin-left:6px;">
+            🧭 Path
+          </button>
         </div>
       </div>
     `;
@@ -955,7 +993,12 @@ function renderWarStories() {
       const p = people[pid];
       const pName = p ? p.n : pid;
       const relStr = p ? getPersonRelationship(p) : '';
-      return `<button class="ancestor-link-btn" onclick="openPersonModal('${pid}')">👤 ${escapeHtml(pName)}${relStr ? ` <span class="btn-subtext">(${escapeHtml(relStr)})</span>` : ''}</button>`;
+      return `
+        <div style="display:inline-flex; align-items:center; gap:4px; margin:2px;">
+          <button class="ancestor-link-btn" onclick="openPersonModal('${pid}')">👤 ${escapeHtml(pName)}${relStr ? ` <span class="btn-subtext">(${escapeHtml(relStr)})</span>` : ''}</button>
+          <button class="btn-mini-path" onclick="event.stopPropagation(); openConnectionPathModal('${pid}')" title="Show path to Jerome or Amy">🧭 Path</button>
+        </div>
+      `;
     }).join('');
 
     return `
@@ -996,7 +1039,12 @@ function renderImmigrationTimeline() {
       const p = people[pid];
       const pName = p ? p.n : pid;
       const relStr = p ? getPersonRelationship(p) : '';
-      return `<button class="ancestor-link-btn" onclick="openPersonModal('${pid}')">👤 ${escapeHtml(pName)}${relStr ? ` <span class="btn-subtext">(${escapeHtml(relStr)})</span>` : ''}</button>`;
+      return `
+        <div style="display:inline-flex; align-items:center; gap:4px; margin:2px;">
+          <button class="ancestor-link-btn" onclick="openPersonModal('${pid}')">👤 ${escapeHtml(pName)}${relStr ? ` <span class="btn-subtext">(${escapeHtml(relStr)})</span>` : ''}</button>
+          <button class="btn-mini-path" onclick="event.stopPropagation(); openConnectionPathModal('${pid}')" title="Show path to Jerome or Amy">🧭 Path</button>
+        </div>
+      `;
     }).join('');
 
     const eraLabel = item.era === '17th' ? '17e Siècle (1600s)' :
@@ -1030,6 +1078,11 @@ function renderImmigrationTimeline() {
 }
 
 let currentModalPersonId = null;
+
+function showPathForCurrentModalPerson() {
+  if (!currentModalPersonId) return;
+  openConnectionPathModal(currentModalPersonId);
+}
 
 function openPersonOnTree() {
   if (!currentModalPersonId) return;
@@ -1086,6 +1139,36 @@ function openPersonModal(pid) {
     } else {
       collapseEl.style.display = 'none';
     }
+  }
+
+  // Quick Direct Lineage Snippet & Show Path Button
+  const snippetEl = document.getElementById('modalLineageSnippet');
+  const pathBtn = document.getElementById('btnModalShowPath');
+  const modalPaths = findPathsToRoots(pid);
+  if (modalPaths && modalPaths.length > 0) {
+    const shortestPath = modalPaths[0];
+    const genCount = shortestPath.length - 1;
+    const rootP = people[shortestPath[0]];
+    const rootName = rootP ? (rootP.id === 'PW92-F2S' ? 'Jerome Eno' : 'Amy Whisenhunt') : 'Root';
+    const linesCount = modalPaths.length;
+    const linesNote = linesCount > 1 ? ` • ${linesCount} lines` : '';
+
+    if (snippetEl) {
+      snippetEl.style.display = 'block';
+      snippetEl.innerHTML = `
+        <div class="lineage-preview-bar">
+          <span>🧭 <strong>${genCount} Generations</strong> from ${escapeHtml(rootName)}${linesNote}</span>
+          <button class="btn-preview-show-path" onclick="openConnectionPathModal('${pid}')">Show the Path ➔</button>
+        </div>
+      `;
+    }
+    if (pathBtn) {
+      pathBtn.style.display = 'block';
+      pathBtn.textContent = `🧭 Show the Path (${genCount} Generations${linesCount > 1 ? ' • Multi-Line' : ''})`;
+    }
+  } else {
+    if (snippetEl) snippetEl.style.display = 'none';
+    if (pathBtn) pathBtn.style.display = 'none';
   }
 
   const originEl = document.getElementById('modalOrigin');
@@ -1264,6 +1347,450 @@ function escapeHtml(str) {
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#039;');
 }
+
+// ================= CONNECTION PATHFINDING & VISUAL TREE =================
+let currentPathPersonId = null;
+let currentPathOptions = []; // Array of path arrays [[root, ..., target], [root, ..., target]]
+let currentPathIndex = 0;
+let currentPathSortAsc = true; // true = root -> target, false = target -> root
+
+function findPathsToRoots(targetId, maxPaths = 5) {
+  const target = people[targetId];
+  if (!target) return [];
+
+  const targetSide = target.s;
+  const primaryRoot = (targetSide === 'amy') ? 'PW92-6SQ' : 'PW92-F2S';
+  const secondaryRoot = (targetSide === 'amy') ? 'PW92-F2S' : 'PW92-6SQ';
+
+  if (targetId === primaryRoot || targetId === secondaryRoot) {
+    return [[targetId]];
+  }
+
+  function searchPaths(fromId, destId) {
+    const queue = [[fromId]];
+    const found = [];
+    const maxIterations = 3000;
+    let iters = 0;
+
+    while (queue.length > 0 && found.length < maxPaths && iters < maxIterations) {
+      iters++;
+      const path = queue.shift();
+      const currId = path[path.length - 1];
+
+      if (currId === destId) {
+        found.push([...path].reverse());
+        continue;
+      }
+
+      const curr = people[currId];
+      if (curr && curr.c && curr.c.length > 0) {
+        for (const cid of curr.c) {
+          if (!path.includes(cid) && people[cid]) {
+            queue.push([...path, cid]);
+          }
+        }
+      }
+    }
+
+    if (found.length === 0) {
+      const qUp = [[destId]];
+      iters = 0;
+      while (qUp.length > 0 && found.length < maxPaths && iters < maxIterations) {
+        iters++;
+        const pth = qUp.shift();
+        const cId = pth[pth.length - 1];
+        if (cId === fromId) {
+          found.push(pth);
+          continue;
+        }
+        const cPerson = people[cId];
+        if (cPerson && cPerson.p) {
+          for (const parId of cPerson.p) {
+            if (!pth.includes(parId) && people[parId]) {
+              qUp.push([...pth, parId]);
+            }
+          }
+        }
+      }
+    }
+
+    return found;
+  }
+
+  let paths = searchPaths(targetId, primaryRoot);
+  if (paths.length === 0 && primaryRoot !== secondaryRoot) {
+    paths = searchPaths(targetId, secondaryRoot);
+  }
+
+  paths.sort((a, b) => a.length - b.length);
+  return paths;
+}
+
+function formatPathSteps(path) {
+  const steps = [];
+  const rootId = path[0];
+  const isJerome = (rootId === 'PW92-F2S');
+
+  for (let i = 0; i < path.length; i++) {
+    const pid = path[i];
+    const p = people[pid];
+    if (!p) continue;
+
+    const isRoot = (i === 0);
+    const isTarget = (i === path.length - 1);
+    const childId = !isRoot ? path[i - 1] : null;
+    const child = childId ? people[childId] : null;
+
+    let spouse = null;
+    if (child && child.p) {
+      const otherParentId = child.p.find(id => id !== pid && Boolean(people[id]));
+      if (otherParentId) spouse = people[otherParentId];
+    }
+
+    let roleLabel = '';
+    if (isRoot) {
+      roleLabel = isJerome ? 'Jerome Eno (You)' : 'Amy Whisenhunt (Wife)';
+    } else if (i === 1) {
+      roleLabel = p.g === 'F' ? 'Mother' : 'Father';
+    } else if (i === 2) {
+      roleLabel = p.g === 'F' ? 'Grandmother' : 'Grandfather';
+    } else if (i === 3) {
+      roleLabel = p.g === 'F' ? 'Great-Grandmother' : 'Great-Grandfather';
+    } else {
+      const k = i - 2;
+      const sfx = (10 <= k % 100 && k % 100 <= 20) ? 'th' : ({1:'st', 2:'nd', 3:'rd'}[k % 10] || 'th');
+      roleLabel = p.g === 'F' ? `${k}${sfx} Great-Grandmother` : `${k}${sfx} Great-Grandfather`;
+    }
+
+    const bYear = p.b ? p.b.slice(0, 4) : '';
+    const dYear = p.d ? p.d.slice(0, 4) : '';
+    const datesStr = (bYear || dYear) ? `${bYear || '—'} – ${dYear || (bYear && parseInt(bYear) < 1920 ? 'Deceased' : 'Living')}` : 'Dates unknown';
+
+    const origin = getPersonOrigin(p);
+
+    let connectionText = '';
+    if (!isRoot && child) {
+      const relationWord = p.g === 'F' ? 'Mother of' : 'Father of';
+      connectionText = `${relationWord} ${child.n}`;
+    }
+
+    steps.push({
+      genIndex: i,
+      pid: p.id,
+      name: p.n,
+      gender: p.g,
+      side: p.s,
+      roleLabel,
+      datesStr,
+      origin: origin !== 'Origin Unknown' ? origin : '',
+      geo: p.geo,
+      spouseName: spouse ? spouse.n : null,
+      spouseId: spouse ? spouse.id : null,
+      spouseDates: spouse ? `${spouse.b?.slice(0,4) || ''}–${spouse.d?.slice(0,4) || ''}` : '',
+      connectionText,
+      isRoot,
+      isTarget
+    });
+  }
+  return steps;
+}
+
+function openConnectionPathModal(personId, selectedLineIndex = 0, sortDirection = 'asc', event) {
+  if (event) event.stopPropagation();
+  const p = people[personId];
+  if (!p) return;
+
+  currentPathPersonId = personId;
+  currentPathIndex = selectedLineIndex;
+  currentPathSortAsc = (sortDirection === 'asc');
+
+  currentPathOptions = findPathsToRoots(personId);
+  if (!currentPathOptions || currentPathOptions.length === 0) {
+    alert(`Could not trace a direct path for ${p.n}.`);
+    return;
+  }
+
+  if (currentPathIndex >= currentPathOptions.length) {
+    currentPathIndex = 0;
+  }
+
+  renderConnectionPathModal();
+  const modal = document.getElementById('connectionPathModal');
+  if (modal) {
+    modal.classList.add('open');
+    document.body.style.overflow = 'hidden';
+  }
+}
+
+function renderConnectionPathModal() {
+  if (!currentPathOptions || currentPathOptions.length === 0) return;
+  const activePath = currentPathOptions[currentPathIndex] || currentPathOptions[0];
+  const targetId = currentPathPersonId;
+  const targetP = people[targetId];
+  const rootId = activePath[0];
+  const rootP = people[rootId];
+  const isJerome = (rootId === 'PW92-F2S');
+
+  const sideBadge = document.getElementById('pathSideBadge');
+  const genCountBadge = document.getElementById('pathGenCountBadge');
+  const titleEl = document.getElementById('pathModalTitle');
+  const subEl = document.getElementById('pathModalSubtitle');
+
+  const genCount = activePath.length - 1;
+  const relStr = targetP ? getPersonRelationship(targetP) : '';
+
+  if (sideBadge) {
+    sideBadge.className = 'badge-side ' + (isJerome ? 'badge-jerome' : 'badge-amy');
+    sideBadge.textContent = isJerome ? "⚜️ Jerome's Line" : "🌸 Amy's Line";
+  }
+  if (genCountBadge) {
+    genCountBadge.textContent = `${genCount} ${genCount === 1 ? 'Generation' : 'Generations'}`;
+  }
+  if (titleEl) {
+    titleEl.textContent = `Connection Path to ${targetP ? escapeHtml(targetP.n) : 'Ancestor'}`;
+  }
+  if (subEl) {
+    const rootName = isJerome ? 'Jerome Eno' : 'Amy Whisenhunt';
+    subEl.textContent = `${relStr} • Lineage connection to ${rootName}`;
+  }
+
+  const lineTabsWrap = document.getElementById('pathLineTabsWrap');
+  const lineTabsContainer = document.getElementById('pathLineTabs');
+  if (currentPathOptions.length > 1) {
+    if (lineTabsWrap) lineTabsWrap.style.display = 'flex';
+    if (lineTabsContainer) {
+      lineTabsContainer.innerHTML = currentPathOptions.map((path, idx) => {
+        const pLen = path.length - 1;
+        const gen2Person = path[2] ? people[path[2]] : null;
+        const branchHint = gen2Person ? `via ${gen2Person.n.split(' ')[0]}` : '';
+        const activeCls = (idx === currentPathIndex) ? 'active' : '';
+        return `
+          <button class="path-line-tab ${activeCls}" onclick="openConnectionPathModal('${targetId}', ${idx}, '${currentPathSortAsc ? 'asc' : 'desc'}')">
+            Line ${idx + 1}: ${pLen} Gens ${branchHint ? `(${branchHint})` : ''}
+          </button>
+        `;
+      }).join('');
+    }
+  } else {
+    if (lineTabsWrap) lineTabsWrap.style.display = 'none';
+  }
+
+  const icon = document.getElementById('pathDirIcon');
+  const label = document.getElementById('pathDirLabel');
+  if (icon) icon.textContent = currentPathSortAsc ? '⬇' : '⬆';
+  if (label) label.textContent = currentPathSortAsc ? 'Root ➔ Ancestor' : 'Ancestor ➔ Root';
+
+  let steps = formatPathSteps(activePath);
+  if (!currentPathSortAsc) {
+    steps = steps.reverse();
+  }
+
+  const trackEl = document.getElementById('pathTimelineTrack');
+  if (!trackEl) return;
+
+  trackEl.innerHTML = steps.map((step) => {
+    const isRoot = step.isRoot;
+    const isTarget = step.isTarget;
+    const stepGenMarker = isRoot ? '★' : (isTarget ? '🎯' : step.genIndex);
+    const sideClass = isJerome ? 'card-jerome' : 'card-amy';
+
+    return `
+      <div class="path-step-node ${isTarget ? 'is-target' : ''} ${isRoot ? 'is-root' : ''}">
+        <div class="path-step-marker" title="Generation ${step.genIndex}">
+          <span>${stepGenMarker}</span>
+        </div>
+        <div class="path-step-content">
+          <div class="path-step-card ${sideClass}">
+            <div class="path-card-header">
+              <div class="path-card-name-row">
+                <span class="path-person-name" onclick="openPersonModal('${step.pid}')" title="Inspect full profile">${escapeHtml(step.name)}</span>
+                <span class="path-gender-icon">${step.gender === 'M' ? '♂' : (step.gender === 'F' ? '♀' : '')}</span>
+              </div>
+              <span class="path-role-badge">${escapeHtml(step.roleLabel)}</span>
+            </div>
+            <div class="path-card-vitals">
+              <span class="vital-dates">${escapeHtml(step.datesStr)}</span>
+              ${step.origin ? `<span class="vital-place">📍 ${escapeHtml(step.origin)}</span>` : ''}
+            </div>
+            ${step.spouseName ? `
+              <div class="path-card-marriage" onclick="openPersonModal('${step.spouseId}')" title="Inspect spouse profile">
+                <span>💍 Married to</span> <strong>${escapeHtml(step.spouseName)}</strong>
+                ${step.spouseDates ? `<span style="color:var(--text-muted); font-size:0.7rem;">(${escapeHtml(step.spouseDates)})</span>` : ''}
+              </div>
+            ` : ''}
+            ${step.connectionText ? `
+              <div class="path-card-connection">
+                <span>${currentPathSortAsc ? '↳' : '↰'}</span>
+                <span>${escapeHtml(step.connectionText)}</span>
+              </div>
+            ` : ''}
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function closeConnectionPathModal() {
+  const modal = document.getElementById('connectionPathModal');
+  if (modal) {
+    modal.classList.remove('open');
+    document.body.style.overflow = '';
+  }
+}
+
+function togglePathDirection() {
+  currentPathSortAsc = !currentPathSortAsc;
+  renderConnectionPathModal();
+}
+
+function openCurrentPathOnTreeCanvas() {
+  if (!currentPathOptions || currentPathOptions.length === 0) return;
+  const activePath = currentPathOptions[currentPathIndex] || [];
+  if (activePath.length === 0) return;
+
+  closeConnectionPathModal();
+  switchTab('tree');
+
+  const rootId = activePath[0];
+  const targetId = activePath[activePath.length - 1];
+  const targetP = people[targetId];
+  const rootP = people[rootId];
+
+  if (rootId === 'PW92-F2S') {
+    document.querySelectorAll('.tree-root-btn').forEach(btn => btn.classList.remove('active'));
+    document.getElementById('btnRootJerome')?.classList.add('active');
+    treeRootMode = 'jerome';
+    currentTreeRootId = 'PW92-F2S';
+  } else if (rootId === 'PW92-6SQ') {
+    document.querySelectorAll('.tree-root-btn').forEach(btn => btn.classList.remove('active'));
+    document.getElementById('btnRootAmy')?.classList.add('active');
+    treeRootMode = 'amy';
+    currentTreeRootId = 'PW92-6SQ';
+  }
+
+  activeTreePath = new Set(activePath);
+  activeTreePathSteps = activePath;
+  activeTreePathStepIdx = activePath.length - 1;
+
+  const banner = document.getElementById('treePathModeBanner');
+  const titleEl = document.getElementById('treePathTitle');
+  const subEl = document.getElementById('treePathSubtitle');
+  const stepPill = document.getElementById('treePathStepIndicator');
+
+  if (titleEl) titleEl.textContent = `Path: ${rootP ? rootP.n : 'Root'} ➔ ${targetP ? targetP.n : 'Target'}`;
+  if (subEl) subEl.textContent = `${activePath.length - 1} Generations • Line ${currentPathIndex + 1} of ${currentPathOptions.length}`;
+  if (stepPill) stepPill.textContent = `Step ${activeTreePathStepIdx + 1} of ${activeTreePathSteps.length}`;
+  if (banner) banner.style.display = 'flex';
+
+  resetTreeViewport();
+  renderTree(true);
+
+  setTimeout(() => {
+    jumpToPathStep(0);
+  }, 200);
+}
+
+function exitTreePathMode() {
+  activeTreePath = null;
+  activeTreePathSteps = [];
+  activeTreePathStepIdx = 0;
+  const banner = document.getElementById('treePathModeBanner');
+  if (banner) banner.style.display = 'none';
+  renderTree(false);
+}
+
+function jumpToPathStep(delta) {
+  if (!activeTreePathSteps || activeTreePathSteps.length === 0) return;
+  activeTreePathStepIdx = Math.max(0, Math.min(activeTreePathSteps.length - 1, activeTreePathStepIdx + delta));
+  
+  const stepPill = document.getElementById('treePathStepIndicator');
+  if (stepPill) stepPill.textContent = `Step ${activeTreePathStepIdx + 1} of ${activeTreePathSteps.length}`;
+
+  const currentPid = activeTreePathSteps[activeTreePathStepIdx];
+  const cards = document.querySelectorAll('.tree-person-card');
+  let targetCard = null;
+  cards.forEach(card => {
+    if (card.getAttribute('onclick')?.includes(currentPid)) {
+      targetCard = card;
+    }
+  });
+
+  if (targetCard) {
+    const left = parseFloat(targetCard.style.left) || 0;
+    const top = parseFloat(targetCard.style.top) || 0;
+    const vp = document.getElementById('treeViewport');
+    if (vp) {
+      const vpW = vp.clientWidth;
+      const vpH = vp.clientHeight;
+      treePanX = (vpW / 2) - ((left + 120) * treeZoom);
+      treePanY = (vpH / 2) - ((top + 45) * treeZoom);
+      applyTreeTransform();
+    }
+  }
+}
+
+function traceCurrentPathOnMap() {
+  if (!currentPathOptions || currentPathOptions.length === 0) return;
+  const activePath = currentPathOptions[currentPathIndex] || [];
+  if (activePath.length === 0) return;
+
+  closeConnectionPathModal();
+  switchTab('map');
+
+  if (!googleMapInstance) return;
+
+  const pathCoords = [];
+  activePath.forEach(pid => {
+    const p = people[pid];
+    if (p && p.geo && p.geo.lat && p.geo.lng) {
+      pathCoords.push({ lat: p.geo.lat, lng: p.geo.lng, name: p.geo.name, personName: p.n });
+    }
+  });
+
+  if (pathCoords.length === 0) return;
+
+  const bounds = new google.maps.LatLngBounds();
+  pathCoords.forEach(c => bounds.extend(new google.maps.LatLng(c.lat, c.lng)));
+  googleMapInstance.fitBounds(bounds);
+
+  if (window._activePathPolyline) {
+    window._activePathPolyline.setMap(null);
+  }
+
+  window._activePathPolyline = new google.maps.Polyline({
+    path: pathCoords.map(c => ({ lat: c.lat, lng: c.lng })),
+    geodesic: true,
+    strokeColor: '#f59e0b',
+    strokeOpacity: 0.9,
+    strokeWeight: 4,
+    zIndex: 9999,
+    map: googleMapInstance
+  });
+
+  const targetId = activePath[activePath.length - 1];
+  const targetP = people[targetId];
+  if (targetP && targetP.geo && targetP.geo.lat && targetP.geo.lng) {
+    const hubs = getEffectiveMapHubs();
+    const matchedLoc = hubs.find(h => {
+      const dLat = Math.abs(h.coords.lat - targetP.geo.lat);
+      const dLng = Math.abs(h.coords.lng - targetP.geo.lng);
+      return (dLat < 0.05 && dLng < 0.05);
+    });
+    if (matchedLoc) {
+      showMapLocationCard(matchedLoc);
+    }
+  }
+}
+
+// Close connection path modal on backdrop click
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('connectionPathModal')?.addEventListener('click', (e) => {
+    if (e.target.id === 'connectionPathModal') {
+      closeConnectionPathModal();
+    }
+  });
+});
 
 // ================= GOOGLE MAPS PLATFORM =================
 let googleMapInstance = null;
@@ -2092,13 +2619,16 @@ function renderCardAncestors(pids, query = '') {
     const dateStr = p ? ((p.b ? `b. ${p.b.substring(0,4)}` : '') + (p.d ? ` • d. ${p.d.substring(0,4)}` : '')) : '';
     const sidePill = p && p.s === 'amy' ? '🌸' : '⚜️';
     return `
-      <button class="ancestor-link-btn" onclick="openPersonModal('${pid}')" style="display:flex; justify-content:space-between; align-items:center; width:100%; text-align:left;">
-        <div>
-          <span>${sidePill} ${escapeHtml(pName)}</span>
-          ${relStr ? `<div style="font-size:0.68rem; color:var(--accent-gold);">${escapeHtml(relStr)}</div>` : ''}
-        </div>
-        ${dateStr ? `<span style="font-size:0.68rem; color:var(--text-muted); font-weight:600;">${dateStr}</span>` : ''}
-      </button>
+      <div style="display:flex; align-items:center; gap:6px; margin-bottom:4px;">
+        <button class="ancestor-link-btn" onclick="openPersonModal('${pid}')" style="display:flex; justify-content:space-between; align-items:center; flex:1; text-align:left; margin:0;">
+          <div>
+            <span>${sidePill} ${escapeHtml(pName)}</span>
+            ${relStr ? `<div style="font-size:0.68rem; color:var(--accent-gold);">${escapeHtml(relStr)}</div>` : ''}
+          </div>
+          ${dateStr ? `<span style="font-size:0.68rem; color:var(--text-muted); font-weight:600;">${dateStr}</span>` : ''}
+        </button>
+        <button class="btn-mini-path" onclick="event.stopPropagation(); openConnectionPathModal('${pid}')" title="Show path to Jerome or Amy">🧭 Path</button>
+      </div>
     `;
   }).join('');
 }

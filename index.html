@@ -192,6 +192,23 @@
 
         <!-- Interactive Pan & Zoom Tree Viewport -->
         <div id="treeViewportWrapper" class="tree-viewport-container">
+          <!-- Floating Path Mode Banner (Active when tracing a lineage path on canvas) -->
+          <div id="treePathModeBanner" class="tree-path-mode-bar" style="display:none;">
+            <div class="tree-path-info">
+              <span class="path-icon">🧭</span>
+              <div class="path-text">
+                <span id="treePathTitle">Path to Jerome</span>
+                <small id="treePathSubtitle">Generations</small>
+              </div>
+            </div>
+            <div class="tree-path-controls">
+              <button class="btn-path-nav" onclick="jumpToPathStep(-1)" title="Previous Step">◀</button>
+              <span id="treePathStepIndicator" class="path-step-pill">Step 1 of 1</span>
+              <button class="btn-path-nav" onclick="jumpToPathStep(1)" title="Next Step">▶</button>
+              <button class="btn-path-exit" onclick="exitTreePathMode()" title="Exit Path Mode">✕ Exit</button>
+            </div>
+          </div>
+
           <div id="treeViewport" class="tree-viewport">
             <div id="treeStage" class="tree-stage">
               <svg id="treeSvg" class="tree-svg-layer"></svg>
@@ -477,6 +494,8 @@
           <h2 class="modal-name" id="modalName">Name</h2>
           <div class="modal-relation-banner" id="modalRelation">10th great-grandmother of Amy</div>
           <div id="modalPedigreeCollapse" class="modal-pedigree-collapse" style="display:none;"></div>
+          <!-- Quick Direct Lineage Snippet -->
+          <div id="modalLineageSnippet" class="modal-lineage-snippet" style="display:none;"></div>
           <div style="font-size:0.78rem; color:var(--text-muted); margin-top:4px;" id="modalId">ID: ABCD-123</div>
         </div>
         <button class="modal-close-btn" onclick="closeModal()">✕</button>
@@ -548,6 +567,9 @@
       </div>
 
       <div style="margin-top: 10px; display:flex; flex-direction:column; gap:8px;">
+        <button class="btn-geo-action btn-show-path-modal" id="btnModalShowPath" onclick="showPathForCurrentModalPerson()">
+          🧭 Show Connection Path
+        </button>
         <button class="btn-geo-action" onclick="openPersonOnTree()" style="background:rgba(245,158,11,0.12); border-color:var(--accent-gold); color:var(--accent-gold-light);">
           🌲 View in Family Tree
         </button>
@@ -558,8 +580,56 @@
     </div>
   </div>
 
-  <script src="data.js?v=2.5"></script>
-  <script src="app.js?v=2.5"></script>
+  <!-- ================= MODAL: CONNECTION PATH TREE VIEW ================= -->
+  <div id="connectionPathModal" class="path-modal-overlay">
+    <div class="path-modal-dialog">
+      <!-- Modal Header -->
+      <div class="path-modal-header">
+        <div style="flex:1; min-width:0;">
+          <div class="path-header-top">
+            <span class="badge-side" id="pathSideBadge">⚜️ Jerome's Line</span>
+            <span class="path-gen-count-badge" id="pathGenCountBadge">11 Generations</span>
+          </div>
+          <h2 class="path-modal-title" id="pathModalTitle">Connection Path to Jerome</h2>
+          <div class="path-modal-subtitle" id="pathModalSubtitle">Traces the exact line of descent from ancestor to root</div>
+        </div>
+        <button class="modal-close-btn" onclick="closeConnectionPathModal()">✕</button>
+      </div>
+
+      <!-- Multi-Line Switcher (Visible if multiple ancestral lines / pedigree collapse exist) -->
+      <div id="pathLineTabsWrap" class="path-line-tabs-wrap" style="display:none;">
+        <span class="path-line-tabs-label">Lineage Branches:</span>
+        <div id="pathLineTabs" class="path-line-tabs"></div>
+      </div>
+
+      <!-- Action Toolbar (View on Tree Canvas, Trace on Map, Direction Toggle) -->
+      <div class="path-modal-toolbar">
+        <div class="path-toolbar-left">
+          <button class="btn-path-action" id="btnPathCanvas" onclick="openCurrentPathOnTreeCanvas()">
+            <span>🌲 View on Tree Canvas</span>
+          </button>
+          <button class="btn-path-action" id="btnPathMap" onclick="traceCurrentPathOnMap()">
+            <span>🗺️ Trace on Map</span>
+          </button>
+        </div>
+        <div class="path-toolbar-right">
+          <button class="btn-path-dir-toggle" id="btnPathDirToggle" onclick="togglePathDirection()">
+            <span id="pathDirIcon">⬇</span> <span id="pathDirLabel">Root ➔ Ancestor</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Visual Tree Pathway Body -->
+      <div class="path-modal-body" id="pathModalBody">
+        <div class="path-timeline-track" id="pathTimelineTrack">
+          <!-- Step cards rendered dynamically -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="data.js?v=2.6"></script>
+  <script src="app.js?v=2.6"></script>
   <!-- Google Maps JavaScript API with Restricted Key -->
   <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyAUp0G9CWriOIAzBiQfTrNG0_k4ScxFFUw&callback=initGoogleMap&loading=async"></script>
 </body>
